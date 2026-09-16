@@ -15,6 +15,10 @@ Views.activity = (function () {
     var matrix = Data.hourMatrix(slice);
     var frag = document.createDocumentFragment();
 
+    frag.appendChild(VH.demoBanner(
+      'The streaks, peak hours and calendar below describe generated data, not your ' +
+      'actual working habits.'));
+
     /* Peak hour and peak day */
     var hourTotals = [];
     for (var hh = 0; hh < 24; hh++) {
@@ -276,7 +280,7 @@ Views.activity = (function () {
 
   return {
     title: 'Activity',
-    sub: 'rhythm, streaks and time-of-day habits',
+    sub: 'rhythm, streaks and time-of-day habits · demo dataset',
     needsRange: true,
     render: render
   };

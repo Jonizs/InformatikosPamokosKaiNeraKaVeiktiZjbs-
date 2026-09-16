@@ -18,6 +18,10 @@ Views.projects = (function () {
     var totalTokens = U.sum(projects, function (p) { return p.tokens; }) || 1;
     var frag = document.createDocumentFragment();
 
+    frag.appendChild(VH.demoBanner(
+      'The project names, repositories and every number here are invented placeholders, ' +
+      'not a scan of your GitHub account.'));
+
     /* --- Tiles ---------------------------------------------------------------- */
 
     var leader = projects[0] || { name: '—', tokens: 0, cost: 0 };
@@ -284,7 +288,7 @@ Views.projects = (function () {
 
   return {
     title: 'Projects',
-    sub: 'where the time and tokens went',
+    sub: 'where the time and tokens went · demo dataset',
     needsRange: true,
     render: render
   };

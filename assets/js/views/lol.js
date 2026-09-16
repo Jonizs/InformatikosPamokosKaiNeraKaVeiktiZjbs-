@@ -13,6 +13,11 @@ Views.lol = (function () {
     var patch = LoL.current;
     var frag = document.createDocumentFragment();
 
+    frag.appendChild(VH.demoBanner(
+      'Patch ' + patch.version + ' is not a real Riot patch and these win rates are not live ' +
+      'statistics — both were written by hand for this demo. The analysis below applies real ' +
+      'analytical methods to that invented dataset.'));
+
     /* --- Filter row: one row, above everything it scopes -------------------- */
 
     frag.appendChild(el('div', { class: 'grid', style: { marginBottom: '2px' } }, [
@@ -570,7 +575,7 @@ Views.lol = (function () {
 
   return {
     title: 'League of Legends',
-    sub: 'patches and the Emerald+ meta',
+    sub: 'patches and the Emerald+ meta · demo dataset',
     needsRange: false,
     render: render
   };

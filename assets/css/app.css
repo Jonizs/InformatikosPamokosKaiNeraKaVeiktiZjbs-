@@ -222,7 +222,10 @@ a { color: inherit; text-decoration: none; }
 }
 .src-badge {
   display: flex; align-items: center; gap: 7px;
-  font-size: 11.5px; color: var(--text-muted);
+  padding: 5px 9px; border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+  font-size: 11.5px; font-weight: 550; color: var(--warning);
 }
 .src-badge .dot {
   width: 7px; height: 7px; border-radius: 50%; flex: none;
@@ -774,4 +777,40 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
 @media (max-width: 860px) {
   .article__headline { font-size: 20px; }
   .take__body, .take__evidence { margin-left: 0; }
+}
+
+/* --- 12. Demo-data banner -------------------------------------------------
+   The dashboard ships with fabricated data. This must read as a warning at a
+   glance, on every view, before any number is read.
+   ----------------------------------------------------------------------- */
+
+.demo-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, transparent);
+}
+.demo-banner__tag {
+  flex: none;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  background: var(--warning); color: #1a1a19;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.demo-banner__text {
+  flex: 1; min-width: 220px;
+  font-size: 12.5px; line-height: 1.55; color: var(--text-secondary);
+}
+.demo-banner__text strong { color: var(--text-primary); font-weight: 650; }
+.demo-banner__link {
+  flex: none;
+  font-size: 12px; font-weight: 550; color: var(--warning);
+  white-space: nowrap;
+}
+.demo-banner__link:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .demo-banner { align-items: flex-start; }
+  .demo-banner__link { width: 100%; }
 }

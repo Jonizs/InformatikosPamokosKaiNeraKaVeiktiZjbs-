@@ -13,6 +13,10 @@ Views.overview = (function () {
     var was = Data.totals(prev);
     var frag = document.createDocumentFragment();
 
+    frag.appendChild(VH.demoBanner(
+      'Every figure below is generated locally by a seeded random-number generator ' +
+      'in assets/js/data/claude-data.js — the projects, sessions, tokens and costs are invented.'));
+
     /* --- Hero figure + tiles ------------------------------------------------ */
 
     frag.appendChild(VH.grid([
@@ -362,7 +366,7 @@ Views.overview = (function () {
 
   return {
     title: 'Overview',
-    sub: 'Claude account usage',
+    sub: 'Claude account usage · demo dataset',
     needsRange: true,
     render: render
   };

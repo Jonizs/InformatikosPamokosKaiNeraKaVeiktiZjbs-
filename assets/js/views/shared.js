@@ -127,6 +127,22 @@ window.VH = (function () {
     ]);
   }
 
+  /* --- Demo-data banner ------------------------------------------------------
+     This dashboard ships with fabricated numbers. That has to be impossible
+     to miss on every view, not a footnote on one card.
+     -------------------------------------------------------------------- */
+
+  function demoBanner(what) {
+    return el('div', { class: 'demo-banner', role: 'note' }, [
+      el('span', { class: 'demo-banner__tag', text: 'Demo data' }),
+      el('p', { class: 'demo-banner__text' }, [
+        el('strong', { text: 'These are not real numbers. ' }),
+        document.createTextNode(what)
+      ]),
+      el('a', { class: 'demo-banner__link', href: '#/settings', text: 'How to connect real data →' })
+    ]);
+  }
+
   /* --- Segmented control -------------------------------------------------------- */
 
   function segmented(options, value, onChange, label) {
@@ -198,7 +214,7 @@ window.VH = (function () {
 
   return {
     bucketize: bucketize, spark: spark, hero: hero, tile: tile, section: section,
-    note: note, segmented: segmented, barCell: barCell, champCell: champCell,
+    note: note, demoBanner: demoBanner, segmented: segmented, barCell: barCell, champCell: champCell,
     grid: grid, col: col
   };
 })();

@@ -15,6 +15,10 @@ Views.models = (function () {
     var R = Data.rates();
     var frag = document.createDocumentFragment();
 
+    frag.appendChild(VH.demoBanner(
+      'Both the token counts and the per-model rates are assumptions. This is not a bill ' +
+      'and does not reflect anything you have actually spent.'));
+
     /* What it would cost with no cache: cache reads billed at full input price */
     var noCache = 0;
     slice.forEach(function (d) {
@@ -285,7 +289,7 @@ Views.models = (function () {
 
   return {
     title: 'Models & cost',
-    sub: 'who does the work and what it costs',
+    sub: 'who does the work and what it costs · demo dataset',
     needsRange: true,
     render: render
   };
