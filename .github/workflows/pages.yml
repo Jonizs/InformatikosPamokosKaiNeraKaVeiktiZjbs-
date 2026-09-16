@@ -1,8 +1,8 @@
 # Publikuoja svetainę į GitHub Pages.
 #
-# Vienkartinis įjungimas: Settings -> Pages -> Build and deployment ->
-# Source: "GitHub Actions". Po to kiekvienas push'as į šią šaką
-# automatiškai atnaujina svetainę.
+# Nieko įjungti ranka nereikia: `enablement: true` leidžia workflow'ui
+# pačiam sukurti Pages svetainę pirmo paleidimo metu. Po to kiekvienas
+# push'as į šią šaką automatiškai ją atnaujina.
 #
 # Projektas yra statinis (jokio build'o), todėl visas repo turinys
 # keliauja tiesiai į Pages.
@@ -33,10 +33,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Atsisiųsti repozitoriją
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Paruošti Pages
         uses: actions/configure-pages@v5
+        with:
+          # Pirmo paleidimo metu pats įjungia Pages ir nustato
+          # šaltinį į GitHub Actions — jokio rankinio žingsnio.
+          enablement: true
 
       - name: Supakuoti svetainę
         uses: actions/upload-pages-artifact@v3

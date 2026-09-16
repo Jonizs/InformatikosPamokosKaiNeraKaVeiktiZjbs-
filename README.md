@@ -25,15 +25,10 @@ python3 -m http.server 8000
 
 ## Publikavimas per GitHub Pages
 
-Repozitorijoje jau yra `.github/workflows/pages.yml`, todėl reikia tik
-**vieną kartą** įjungti Pages:
-
-1. Eik į **Settings → Pages**
-2. Ties **Build and deployment → Source** pasirink **GitHub Actions**
-3. Viskas — pirmas deploy'us pasileis pats
-
-Po to kiekvienas push'as į šaką automatiškai atnaujina svetainę. Eigą matysi
-**Actions** skirtuke, o galutinė nuoroda bus:
+Publikavimas jau sutvarkytas ir **rankinių žingsnių nereikia**:
+`.github/workflows/pages.yml` pirmo paleidimo metu pats įjungia Pages
+(`enablement: true`), o vėliau kiekvienas push'as į šaką automatiškai
+atnaujina svetainę. Eigą matysi **Actions** skirtuke, o nuoroda:
 
 ```
 https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/
@@ -42,7 +37,9 @@ https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/
 Deploy'ą galima paleisti ir ranka: **Actions → Deploy to GitHub Pages →
 Run workflow**.
 
-Jei labiau patinka senas būdas be Actions, veiks ir **Source: Deploy from a
+> Repozitorija yra vieša, tad ir svetainė bus vieša.
+
+Jei kada prireiktų seno būdo be Actions, veiks ir **Source: Deploy from a
 branch**, pasirinkus šią šaką ir šakninį (`/`) katalogą — visi keliai
 projekte reliatyvūs, tad svetainė veikia ir iš podėlio
 `/<repo-pavadinimas>/`. Failas `.nojekyll` išjungia Jekyll apdorojimą, kad
