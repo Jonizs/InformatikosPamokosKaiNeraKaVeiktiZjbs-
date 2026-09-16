@@ -69,22 +69,55 @@ Pricing is also an **assumption** — the dashboard has no access to your real
 rates, so it computes costs from the values in Settings. Change them and every
 figure recomputes.
 
-### Wiring up real data
+### Using your own real usage
+
+Claude Code writes a transcript of every session to
+`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`, and every assistant
+record in it carries a real `usage` block — input tokens, output tokens, cache
+reads and cache writes — plus a timestamp, the model and the working directory.
+
+```bash
+python3 tools/export-usage.py          # writes assets/data/usage.json
+```
+
+Reload the dashboard and it picks the file up automatically: the banner turns
+green, the sidebar shows your date range, and every chart is drawing your own
+numbers. Options: `--list` (preview only), `--days 90`, `--claude-dir`.
+
+**It reads counts, never content.** The exporter touches only `timestamp`,
+`sessionId`, `cwd`, `message.model` and `message.usage`. It never opens your
+prompts, Claude's replies, file contents or tool output — see `_extract()` in
+the script, which is the only place fields are read. The output is gitignored,
+so it stays on your machine unless you force-add it.
+
+**What it cannot cover:** claude.ai web and mobile chats, sessions on other
+machines, and transcripts Claude Code has already pruned. There is no public
+API that returns personal usage history for a Claude.ai subscription, so local
+transcripts are the only real source available. (Anthropic *API* organisations
+have `GET /v1/organizations/usage_report/messages` and `/cost_report`, but
+those need an Admin API key and do not cover consumer subscriptions.)
+
+**Two metrics stay blank on real data** — tool calls and lines changed. Both
+would require reading message content, so the dashboard shows `—` rather than
+inventing them.
+
+**Cost on a subscription is hypothetical.** Your token counts are real, but a
+Claude.ai plan is a flat fee. The cost figures show what that usage *would* have
+cost at published API rates, labelled as such.
+
+### Any other source
 
 Every view reads the `Data` and `LoL` APIs and nothing else, so one function per
 source is the whole integration:
 
 ```js
-// One row per day
-Data.load(fetch('/my-usage.json').then(r => r.json()))
-    .then(() => App.rerender());
-
-// { patches: [...], champions: [...] }
-LoL.load(fetch('/lol.json').then(r => r.json()))
-   .then(() => App.rerender());
+Data.load(fetch('/my-usage.json').then(r => r.json())).then(() => App.rerender());
+LoL.load(fetch('/lol.json').then(r => r.json())).then(() => App.rerender());
 ```
 
-The exact field shapes are printed in the Settings tab.
+`Data.load()` accepts either a bare `days` array or the full
+`{ meta, models, projects, days }` payload the exporter writes. The exact field
+shapes are printed in the Settings tab.
 
 Champion portraits come from Riot's Data Dragon CDN. If they fail to load (no
 network, blocked), initial tiles are shown instead — nothing breaks.
@@ -111,7 +144,9 @@ assets/js/data/claude-data.js  Claude data layer and queries
 assets/js/data/lol-data.js     League patches, champion stats, patch analysis
 assets/js/views/shared.js      shared view blocks (tiles, headings, filters)
 assets/js/views/*.js           one file per tab
-assets/js/app.js               routing (#/hash), state, theme
+assets/js/app.js               routing (#/hash), state, theme, real-data loading
+tools/export-usage.py          rolls your local Claude Code transcripts into usage.json
+assets/data/usage.json         your export (gitignored — private by default)
 .github/workflows/pages.yml    automatic GitHub Pages deployment
 .nojekyll                      disables Jekyll processing on Pages
 ```

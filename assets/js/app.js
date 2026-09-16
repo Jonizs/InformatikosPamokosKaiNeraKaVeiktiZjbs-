@@ -137,6 +137,32 @@ window.App = (function () {
 
   /* --- Boot ----------------------------------------------------------------------------- */
 
+  /* --- Real data ------------------------------------------------------------
+     If tools/export-usage.py has written assets/data/usage.json, use it.
+     Absent (404) or unreadable, the generated demo data stays in place. */
+
+  function tryRealData() {
+    if (location.protocol === 'file:') return Promise.resolve(false);   /* fetch is blocked */
+    return fetch('assets/data/usage.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (payload) {
+        if (!payload) return false;
+        return Data.load(payload).then(function () { return true; });
+      })
+      .catch(function () { return false; });
+  }
+
+  function markSource() {
+    var badge = U.qs('#srcBadge');
+    var text = U.qs('.src-badge__text');
+    if (!badge || !text) return;
+    if (!Data.isReal()) return;
+    badge.classList.add('is-live');
+    badge.title = 'Exported from your local Claude Code transcripts';
+    var m = Data.meta() || {};
+    text.textContent = m.from && m.to ? 'Your data · ' + m.from + ' → ' + m.to : 'Your data';
+  }
+
   function init() {
     setTheme(U.store.get('theme', 'dark'));
 
@@ -158,13 +184,20 @@ window.App = (function () {
       }
     });
 
-    /* Sidebar badges */
-    var total = Data.totals(Data.range(30));
-    U.qs('#navBadgeOverview').textContent = U.compact(total.tokensTotal, 0);
-    U.qs('#navBadgePatch').textContent = LoL.current.version;
-    U.qs('#footStamp').textContent = 'Data through ' + U.fullDate(U.iso(U.TODAY));
+    /* Load a real export first, so the first paint is already correct. */
+    tryRealData().then(function () {
+      markSource();
 
-    navigate();
+      var total = Data.totals(Data.range(30));
+      U.qs('#navBadgeOverview').textContent = U.compact(total.tokensTotal, 0);
+      U.qs('#navBadgePatch').textContent = LoL.current.version;
+
+      var last = Data.all()[Data.all().length - 1];
+      U.qs('#footStamp').textContent = 'Data through ' +
+        U.fullDate(last ? last.date : U.iso(U.TODAY));
+
+      navigate();
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

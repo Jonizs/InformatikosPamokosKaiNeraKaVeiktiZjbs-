@@ -132,7 +132,13 @@ window.VH = (function () {
      to miss on every view, not a footnote on one card.
      -------------------------------------------------------------------- */
 
-  function demoBanner(what) {
+  /**
+   * @param what        what specifically is invented on this view
+   * @param alwaysDemo  true for views with no real source at all (the League
+   *                    tab), so attaching a Claude export never relabels them
+   */
+  function demoBanner(what, alwaysDemo) {
+    if (!alwaysDemo && typeof Data !== 'undefined' && Data.isReal && Data.isReal()) return realBanner();
     return el('div', { class: 'demo-banner', role: 'note' }, [
       el('span', { class: 'demo-banner__tag', text: 'Demo data' }),
       el('p', { class: 'demo-banner__text' }, [
@@ -141,6 +147,30 @@ window.VH = (function () {
       ]),
       el('a', { class: 'demo-banner__link', href: '#/settings', text: 'How to connect real data →' })
     ]);
+  }
+
+  /** Shown once a real export is attached — states the scope, not just "real". */
+  function realBanner() {
+    var m = Data.meta() || {};
+    var notCovered = (m.notCovered || []).join(', ');
+    return el('div', { class: 'demo-banner demo-banner--live', role: 'note' }, [
+      el('span', { class: 'demo-banner__tag', text: 'Your data' }),
+      el('p', { class: 'demo-banner__text' }, [
+        el('strong', { text: 'Exported from your local Claude Code transcripts. ' }),
+        document.createTextNode(
+          (m.from && m.to ? m.from + ' to ' + m.to + '. ' : '') +
+          (notCovered ? 'Not included: ' + notCovered + '.' : '')
+        )
+      ])
+    ]);
+  }
+
+
+  /** Honest label for the cost figures, given how the data was sourced. */
+  function costFoot() {
+    var m = (typeof Data !== 'undefined' && Data.meta) ? Data.meta() : null;
+    if (m && m.costBasis === 'subscription') return 'at API rates · you pay a flat subscription';
+    return 'using the editable rates';
   }
 
   /* --- Segmented control -------------------------------------------------------- */
@@ -214,7 +244,7 @@ window.VH = (function () {
 
   return {
     bucketize: bucketize, spark: spark, hero: hero, tile: tile, section: section,
-    note: note, demoBanner: demoBanner, segmented: segmented, barCell: barCell, champCell: champCell,
+    note: note, demoBanner: demoBanner, realBanner: realBanner, costFoot: costFoot, segmented: segmented, barCell: barCell, champCell: champCell,
     grid: grid, col: col
   };
 })();

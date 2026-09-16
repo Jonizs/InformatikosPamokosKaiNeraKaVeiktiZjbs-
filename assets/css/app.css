@@ -814,3 +814,9 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
   .demo-banner { align-items: flex-start; }
   .demo-banner__link { width: 100%; }
 }
+
+.demo-banner--live {
+  background: color-mix(in srgb, var(--good) 11%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+}
+.demo-banner--live .demo-banner__tag { background: var(--good); color: #fff; }

@@ -33,7 +33,7 @@ Views.overview = (function () {
         value: U.money(now.cost),
         delta: Data.pctChange(now.cost, was.cost),
         upIsGood: false,
-        foot: 'using the editable rates',
+        foot: VH.costFoot(),
         spark: VH.spark(slice, function (d) { return Data.dayCost(d); }),
         color: U.token('--series-2')
       })])
@@ -54,11 +54,15 @@ Views.overview = (function () {
         spark: VH.spark(slice, function (d) { return d.messages; }),
         color: U.token('--series-3')
       })]),
-      VH.col(3, [VH.tile({
+      VH.col(3, [Data.hasMetric('toolCalls') ? VH.tile({
         label: 'Tool calls', value: U.compact(now.toolCalls),
         delta: Data.pctChange(now.toolCalls, was.toolCalls),
         foot: U.dec(now.toolCalls / Math.max(1, now.messages), 1) + ' per message',
         spark: VH.spark(slice, function (d) { return d.toolCalls; }),
+        color: U.token('--series-4')
+      }) : VH.tile({
+        label: 'Tool calls', value: '—',
+        foot: 'needs message content, which the exporter does not read',
         color: U.token('--series-4')
       })]),
       VH.col(3, [VH.tile({
@@ -337,8 +341,8 @@ Views.overview = (function () {
       ['Tokens per session', U.compact(now.avgSession)],
       ['Tokens per active day', U.compact(now.avgPerActiveDay)],
       ['Cache hit rate', U.pct(now.cacheHitRate, 1)],
-      ['Lines added', U.num(now.linesAdded)],
-      ['Lines removed', U.num(now.linesRemoved)],
+      ['Lines added', Data.hasMetric('linesAdded') ? U.num(now.linesAdded) : '—'],
+      ['Lines removed', Data.hasMetric('linesRemoved') ? U.num(now.linesRemoved) : '—'],
       ['Cost per session', U.money(now.cost / Math.max(1, now.sessions))],
       ['Cost per 1M tokens', U.money(now.cost / Math.max(1, now.tokensTotal / 1e6))]
     ];
@@ -366,7 +370,7 @@ Views.overview = (function () {
 
   return {
     title: 'Overview',
-    sub: 'Claude account usage · demo dataset',
+    get sub() { return 'Claude account usage' + (Data.isReal() ? '' : ' · demo dataset'); },
     needsRange: true,
     render: render
   };

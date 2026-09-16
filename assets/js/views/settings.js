@@ -123,32 +123,36 @@ Views.settings = (function () {
 
   function claudeSourceCard() {
     var code = [
-      '// assets/js/data/claude-data.js — Data.load()',
-      'Data.load(',
-      '  fetch("/my-usage.json").then(r => r.json())',
-      ').then(() => App.rerender());',
+      '# On your own machine, in this repo:',
+      'python3 tools/export-usage.py',
       '',
-      '// Expects an array with one row per day:',
-      '// {',
-      '//   date: "2026-09-16",      // ISO date',
-      '//   weekday: 2,              // 0 = Monday',
-      '//   sessions: 4, messages: 58, toolCalls: 121,',
-      '//   tokensIn: 120000, tokensOut: 36000,',
-      '//   cacheRead: 410000, cacheWrite: 52000,',
-      '//   tokensTotal: 618000,',
-      '//   linesAdded: 430, linesRemoved: 180,',
-      '//   modelSplit: { "opus-5": 0.4, "sonnet-5": 0.45, "haiku-45": 0.15 },',
-      '//   projSplit:  { "skydas-dashboard": 0.7, "other": 0.3 }',
-      '// }'
+      '# then reload the dashboard — it finds the file automatically.',
+      '',
+      '# options',
+      'python3 tools/export-usage.py --list        # preview, write nothing',
+      'python3 tools/export-usage.py --days 90     # last 90 days only',
+      'python3 tools/export-usage.py --claude-dir ~/.claude'
     ].join('\n');
 
     return el('div', { class: 'card' }, [
-      head('Claude usage', 'wiring up real data'),
+      head('Your real Claude Code usage', 'no API key needed'),
       el('div', { class: 'card__body' }, [
         el('p', { class: 'setting__desc', style: { marginBottom: '10px' },
-          text: 'Every view reads the Data API and nothing else, so one function is the whole ' +
-                'integration — no card needs rewriting.' }),
-        codeBlock(code)
+          text: 'Claude Code writes a transcript of every session to ~/.claude/projects/, and each ' +
+                'assistant record carries real token counts. The exporter rolls those up per day ' +
+                'and writes assets/data/usage.json, which the dashboard loads on startup.' }),
+        codeBlock(code),
+        el('div', { style: { marginTop: '12px' } }, [
+          VH.note('It reads counts, never content.',
+            'The exporter touches only timestamp, sessionId, cwd, model and usage. It never opens ' +
+            'your prompts, Claude\u2019s replies, file contents or tool output. The output file is ' +
+            'gitignored, so it stays on your machine unless you force-add it.')
+        ]),
+        el('p', { class: 'setting__desc', style: { marginTop: '12px' },
+          text: 'Not covered: claude.ai web and mobile chats, sessions on other machines, and ' +
+                'transcripts Claude Code has already pruned. There is no public API that returns ' +
+                'personal usage history for a Claude.ai subscription, so local transcripts are the ' +
+                'only real source available.' })
       ])
     ]);
   }

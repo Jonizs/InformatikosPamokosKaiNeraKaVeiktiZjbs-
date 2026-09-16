@@ -16,7 +16,7 @@ Views.lol = (function () {
     frag.appendChild(VH.demoBanner(
       'Patch ' + patch.version + ' is not a real Riot patch and these win rates are not live ' +
       'statistics — both were written by hand for this demo. The analysis below applies real ' +
-      'analytical methods to that invented dataset.'));
+      'analytical methods to that invented dataset.', true));
 
     /* --- Filter row: one row, above everything it scopes -------------------- */
 

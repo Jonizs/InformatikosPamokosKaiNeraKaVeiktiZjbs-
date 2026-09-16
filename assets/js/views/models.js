@@ -38,7 +38,7 @@ Views.models = (function () {
         value: U.money(now.cost),
         delta: Data.pctChange(now.cost, was.cost),
         upIsGood: false,
-        deltaNote: 'vs the preceding period',
+        deltaNote: VH.costFoot() + ' · vs the preceding period',
         sparkValues: VH.spark(slice, function (d) { return Data.dayCost(d); }),
         sparkColor: U.token('--series-2')
       })]),
@@ -243,9 +243,16 @@ Views.models = (function () {
       el('div', { class: 'card__body' }, [
         dl,
         el('div', { style: { marginTop: '14px' } }, [
-          VH.note('These rates are an assumption.',
-            'The dashboard has no access to your real pricing, so every cost is computed from ' +
-            'the values above. Change them in Settings and all figures recompute.')
+          VH.note(
+            Data.meta() && Data.meta().costBasis === 'subscription'
+              ? 'You are not billed per token.'
+              : 'These rates are an assumption.',
+            Data.meta() && Data.meta().costBasis === 'subscription'
+              ? 'Your token counts are real, but a Claude.ai subscription is a flat fee. ' +
+                'Everything below is what this usage would have cost at published API rates — ' +
+                'useful for comparison, not a bill.'
+              : 'The dashboard has no access to your real pricing, so every cost is computed from ' +
+                'the values above. Change them in Settings and all figures recompute.')
         ])
       ])
     ]);
@@ -289,7 +296,7 @@ Views.models = (function () {
 
   return {
     title: 'Models & cost',
-    sub: 'who does the work and what it costs · demo dataset',
+    get sub() { return 'who does the work and what it costs' + (Data.isReal() ? '' : ' · demo dataset'); },
     needsRange: true,
     render: render
   };

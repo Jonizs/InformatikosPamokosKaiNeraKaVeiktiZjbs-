@@ -280,7 +280,7 @@ Views.activity = (function () {
 
   return {
     title: 'Activity',
-    sub: 'rhythm, streaks and time-of-day habits · demo dataset',
+    get sub() { return 'rhythm, streaks and time-of-day habits' + (Data.isReal() ? '' : ' · demo dataset'); },
     needsRange: true,
     render: render
   };

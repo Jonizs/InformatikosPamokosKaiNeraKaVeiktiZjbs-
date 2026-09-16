@@ -37,11 +37,15 @@ Views.projects = (function () {
         label: 'Leading project', value: U.dec((leader.tokens / totalTokens) * 100, 0), unit: '%',
         foot: leader.name, color: U.token('--series-2')
       })]),
-      VH.col(3, [VH.tile({
+      VH.col(3, [Data.hasMetric('linesAdded') ? VH.tile({
         label: 'Lines changed', value: U.compact(lines),
         delta: Data.pctChange(lines, linesBefore),
         foot: 'added and removed',
         spark: VH.spark(slice, function (d) { return d.linesAdded + d.linesRemoved; }),
+        color: U.token('--series-3')
+      }) : VH.tile({
+        label: 'Lines changed', value: '—',
+        foot: 'needs message content, which the exporter does not read',
         color: U.token('--series-3')
       })]),
       VH.col(3, [VH.tile({
@@ -288,7 +292,7 @@ Views.projects = (function () {
 
   return {
     title: 'Projects',
-    sub: 'where the time and tokens went · demo dataset',
+    get sub() { return 'where the time and tokens went' + (Data.isReal() ? '' : ' · demo dataset'); },
     needsRange: true,
     render: render
   };

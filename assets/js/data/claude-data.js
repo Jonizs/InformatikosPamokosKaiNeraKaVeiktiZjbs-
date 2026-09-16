@@ -32,9 +32,20 @@ window.Data = (function () {
 
   /* Price assumptions ($ per 1M tokens). Editable in Settings. */
   var DEFAULT_RATES = {
+    /* demo catalogue ids */
     'opus-5':   { in: 5.00, out: 25.00 },
     'sonnet-5': { in: 3.00, out: 15.00 },
     'haiku-45': { in: 1.00, out: 5.00 },
+    /* real model ids, as they appear in exported transcripts */
+    'claude-opus-5':     { in: 5.00, out: 25.00 },
+    'claude-opus-4-8':   { in: 5.00, out: 25.00 },
+    'claude-opus-4-7':   { in: 5.00, out: 25.00 },
+    'claude-opus-4-6':   { in: 5.00, out: 25.00 },
+    'claude-sonnet-5':   { in: 2.00, out: 10.00 },
+    'claude-sonnet-4-6': { in: 3.00, out: 15.00 },
+    'claude-haiku-4-5':  { in: 1.00, out: 5.00 },
+    'claude-fable-5':    { in: 10.00, out: 50.00 },
+    'claude-fable-5-1':  { in: 10.00, out: 50.00 },
     cacheReadFactor: 0.10,                         /* × the input rate */
     cacheWriteFactor: 1.25
   };
@@ -136,13 +147,23 @@ window.Data = (function () {
 
   var days = build();
 
+  /* Null while the dashboard is showing generated data; set by Data.load()
+     once a real export is attached. Views read it to change their labels. */
+  var meta = null;
+
+  /* Metrics the local-transcript exporter cannot derive without reading
+     message content, which it deliberately does not do. */
+  var MISSING_WHEN_REAL = ['toolCalls', 'linesAdded', 'linesRemoved'];
+
   /* --- Cost calculation ------------------------------------------------------ */
+
+  var ZERO_RATE = { in: 0, out: 0 };
 
   function dayCost(d, R) {
     var c = 0;
     MODELS.forEach(function (mdl) {
-      var share = d.modelSplit[mdl.id];
-      var r = R[mdl.id];
+      var share = d.modelSplit[mdl.id] || 0;
+      var r = R[mdl.id] || ZERO_RATE;
       c += (d.tokensIn * share / 1e6) * r.in;
       c += (d.tokensOut * share / 1e6) * r.out;
       c += (d.cacheRead * share / 1e6) * r.in * R.cacheReadFactor;
@@ -233,14 +254,14 @@ window.Data = (function () {
     });
     slice.forEach(function (d) {
       acc.forEach(function (a) {
-        var share = d.modelSplit[a.id];
+        var share = d.modelSplit[a.id] || 0;
         a.tokens += d.tokensTotal * share;
         a.tokensIn += d.tokensIn * share;
         a.tokensOut += d.tokensOut * share;
         a.cacheRead += d.cacheRead * share;
         a.cacheWrite += d.cacheWrite * share;
         a.messages += d.messages * share;
-        var r = R[a.id];
+        var r = R[a.id] || ZERO_RATE;
         a.cost += (d.tokensIn * share / 1e6) * r.in
                 + (d.tokensOut * share / 1e6) * r.out
                 + (d.cacheRead * share / 1e6) * r.in * R.cacheReadFactor
@@ -255,10 +276,14 @@ window.Data = (function () {
     var m = [];
     for (var i = 0; i < 7; i++) m.push(new Array(24).fill(0));
     slice.forEach(function (d) {
-      var rnd = U.rng(Math.round(d.hourSeed * 1e9));
+      if (d.hourly && d.hourly.length === 24) {
+        /* Real export: exact per-hour message counts from the transcripts. */
+        for (var k = 0; k < 24; k++) m[d.weekday][k] += d.hourly[k];
+        return;
+      }
+      var rnd = U.rng(Math.round((d.hourSeed || 0.5) * 1e9));
       for (var hh = 0; hh < 24; hh++) {
-        var v = d.messages * HOUR_SHAPE[hh] * (0.6 + rnd() * 0.9);
-        m[d.weekday][hh] += v;
+        m[d.weekday][hh] += d.messages * HOUR_SHAPE[hh] * (0.6 + rnd() * 0.9);
       }
     });
     return m.map(function (row) { return row.map(function (v) { return Math.round(v); }); });
@@ -299,13 +324,14 @@ window.Data = (function () {
       var count = Math.min(d.sessions, 2);
       for (var k = 0; k < count && out.length < (limit || 12); k++) {
         var pid = ids[k % ids.length];
-        var titles = SESSION_TITLES[pid] || ['Session'];
+        var titles = SESSION_TITLES[pid] || null;
         var share = d.projSplit[pid];
         out.push({
           date: d.date,
           project: pid,
           projectName: (PROJECTS.filter(function (p) { return p.id === pid; })[0] || {}).name || pid,
-          title: titles[Math.floor(rnd() * titles.length)],
+          /* A real export carries no titles — it never reads message content. */
+          title: titles ? titles[Math.floor(rnd() * titles.length)] : 'Session',
           tokens: Math.round(d.tokensTotal * share / Math.max(1, count)),
           messages: Math.max(3, Math.round(d.messages * share / Math.max(1, count))),
           minutes: Math.max(6, Math.round(12 + rnd() * 78)),
@@ -336,13 +362,50 @@ window.Data = (function () {
     recentSessions: recentSessions,
     dayCost: function (d) { return dayCost(d, rates()); },
 
-    /* Hook-up point for real data: return the same shape of `days` array.
-       e.g. Data.load(fetch(url).then(r => r.json())) — see Settings. */
+    /* --- Attaching real data ------------------------------------------------
+       Accepts either a bare `days` array or the full payload written by
+       tools/export-usage.py: { meta, models, projects, days }. Catalogues are
+       mutated in place so references already held by views stay valid. */
     load: function (promise) {
-      return Promise.resolve(promise).then(function (rows) {
-        if (Array.isArray(rows) && rows.length) { days = rows; }
+      return Promise.resolve(promise).then(function (payload) {
+        if (!payload) return days;
+
+        var rows = Array.isArray(payload) ? payload : payload.days;
+        if (!Array.isArray(rows) || !rows.length) return days;
+
+        days = rows;
+        meta = (Array.isArray(payload) ? null : payload.meta) || { source: 'custom' };
+
+        if (!Array.isArray(payload) && Array.isArray(payload.models) && payload.models.length) {
+          MODELS.length = 0;
+          payload.models.forEach(function (m, i) {
+            MODELS.push({ id: m.id, name: m.name || m.id, slot: m.slot === undefined ? i : m.slot });
+            if (!DEFAULT_RATES[m.id]) DEFAULT_RATES[m.id] = { in: 0, out: 0 };  /* unknown model: no guess */
+          });
+        }
+        if (!Array.isArray(payload) && Array.isArray(payload.projects) && payload.projects.length) {
+          PROJECTS.length = 0;
+          payload.projects.forEach(function (p, i) {
+            PROJECTS.push({
+              id: p.id, name: p.name || p.id, lang: p.lang || '—',
+              slot: p.slot === undefined ? i : p.slot, repo: p.repo || null
+            });
+          });
+        }
         return days;
       });
+    },
+
+    /** True once a real export has been attached. */
+    isReal: function () { return meta !== null; },
+    meta: function () { return meta; },
+
+    /** Whether a metric carries real values in the current dataset. */
+    hasMetric: function (name) {
+      if (meta === null) return true;
+      if (meta.unavailable) return meta.unavailable.indexOf(name) === -1;
+      return MISSING_WHEN_REAL.indexOf(name) === -1;
     }
+
   };
 })();

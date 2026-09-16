@@ -1,0 +1,8 @@
+# Your exported Claude Code usage stays on your machine.
+#
+# tools/export-usage.py writes here. The file contains token counts, session
+# counts and the names of directories you have worked in — it is your data,
+# and the published site is public, so it is not committed by default.
+#
+# If you deliberately want it published, force it:  git add -f assets/data/usage.json
+assets/data/usage.json
