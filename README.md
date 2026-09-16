@@ -25,10 +25,19 @@ python3 -m http.server 8000
 
 ## Publikavimas per GitHub Pages
 
-Publikavimas jau sutvarkytas ir **rankinių žingsnių nereikia**:
-`.github/workflows/pages.yml` pirmo paleidimo metu pats įjungia Pages
-(`enablement: true`), o vėliau kiekvienas push'as į šaką automatiškai
-atnaujina svetainę. Eigą matysi **Actions** skirtuke, o nuoroda:
+Workflow'as (`.github/workflows/pages.yml`) jau paruoštas. Lieka **vienas
+vienkartinis žingsnis, kurį gali padaryti tik repo savininkas**:
+
+1. **Settings → Pages**
+2. **Build and deployment → Source** → pasirink **GitHub Actions**
+3. Eik į **Actions → Deploy to GitHub Pages** ir paspausk **Re-run jobs**
+   ties paskutiniu paleidimu (arba **Run workflow**)
+
+Pats workflow'as Pages įjungti negali: `GITHUB_TOKEN` neturi admin teisių,
+todėl `enablement: true` grąžina „Resource not accessible by integration".
+
+Įjungus, kiekvienas push'as į šaką svetainę atnaujina automatiškai. Eigą
+matysi **Actions** skirtuke, o nuoroda bus:
 
 ```
 https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/

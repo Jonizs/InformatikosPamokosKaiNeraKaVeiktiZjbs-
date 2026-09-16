@@ -1,8 +1,12 @@
 # Publikuoja svetainę į GitHub Pages.
 #
-# Nieko įjungti ranka nereikia: `enablement: true` leidžia workflow'ui
-# pačiam sukurti Pages svetainę pirmo paleidimo metu. Po to kiekvienas
-# push'as į šią šaką automatiškai ją atnaujina.
+# VIENKARTINIS ŽINGSNIS (jį gali padaryti tik repo savininkas):
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+#
+# Pačiam workflow'ui sukurti Pages svetainės neleidžiama — GITHUB_TOKEN
+# neturi admin teisių, todėl `enablement: true` grąžina
+# "Resource not accessible by integration". Įjungus ranka, viskas toliau
+# vyksta automatiškai: kiekvienas push'as į šią šaką atnaujina svetainę.
 #
 # Projektas yra statinis (jokio build'o), todėl visas repo turinys
 # keliauja tiesiai į Pages.
@@ -37,10 +41,6 @@ jobs:
 
       - name: Paruošti Pages
         uses: actions/configure-pages@v5
-        with:
-          # Pirmo paleidimo metu pats įjungia Pages ir nustato
-          # šaltinį į GitHub Actions — jokio rankinio žingsnio.
-          enablement: true
 
       - name: Supakuoti svetainę
         uses: actions/upload-pages-artifact@v3
