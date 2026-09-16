@@ -1,7 +1,7 @@
 /* =============================================================================
-   views/modeliai.js — 4 skirtukas: modeliai ir kaštai
+   views/models.js — tab 4: models and cost
    ========================================================================== */
-Views.modeliai = (function () {
+Views.models = (function () {
   'use strict';
 
   var el = U.el;
@@ -15,7 +15,7 @@ Views.modeliai = (function () {
     var R = Data.rates();
     var frag = document.createDocumentFragment();
 
-    /* Kiek kainuotų be podėlio: podėlio skaitymas apmokestintas pilna įvesties kaina */
+    /* What it would cost with no cache: cache reads billed at full input price */
     var noCache = 0;
     slice.forEach(function (d) {
       Data.MODELS.forEach(function (m) {
@@ -26,50 +26,50 @@ Views.modeliai = (function () {
     });
     var saved = Math.max(0, noCache - now.cost);
 
-    /* --- Herojus + plytelės ------------------------------------------------ */
+    /* --- Hero + tiles ----------------------------------------------------------- */
 
     frag.appendChild(VH.grid([
       VH.col(8, [VH.hero({
-        label: 'Įvertinti kaštai · ' + state.rangeLabel.toLowerCase(),
+        label: 'Estimated cost · ' + state.rangeLabel.toLowerCase(),
         value: U.money(now.cost),
         delta: Data.pctChange(now.cost, was.cost),
         upIsGood: false,
-        deltaNote: 'lyginant su ankstesniu laikotarpiu',
+        deltaNote: 'vs the preceding period',
         sparkValues: VH.spark(slice, function (d) { return Data.dayCost(d); }),
         sparkColor: U.token('--series-2')
       })]),
       VH.col(4, [VH.tile({
-        label: 'Sutaupyta podėliu', value: U.money(saved),
-        foot: U.dec((saved / (noCache || 1)) * 100, 0) + ' % nuo kainos be podėlio',
+        label: 'Saved by caching', value: U.money(saved),
+        foot: U.dec((saved / (noCache || 1)) * 100, 0) + '% off the uncached price',
         color: U.token('--series-3')
       })])
     ]));
 
     frag.appendChild(VH.grid([
       VH.col(3, [VH.tile({
-        label: 'Kaštai per dieną', value: U.money(now.cost / Math.max(1, now.days)),
-        foot: 'vidurkis per visas dienas', color: U.token('--series-2'),
+        label: 'Cost per day', value: U.money(now.cost / Math.max(1, now.days)),
+        foot: 'averaged over every day', color: U.token('--series-2'),
         spark: VH.spark(slice, function (d) { return Data.dayCost(d); })
       })]),
       VH.col(3, [VH.tile({
-        label: 'Kaina 1 mln. žetonų', value: U.money(now.cost / Math.max(0.000001, now.tokensTotal / 1e6)),
-        foot: 'faktinis mišinio vidurkis', color: U.token('--series-1')
+        label: 'Price per 1M tokens', value: U.money(now.cost / Math.max(0.000001, now.tokensTotal / 1e6)),
+        foot: 'the actual blended rate', color: U.token('--series-1')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Podėlio pataikymas', value: U.dec(now.cacheHitRate, 1), unit: ' %',
+        label: 'Cache hit rate', value: U.dec(now.cacheHitRate, 1), unit: '%',
         delta: now.cacheHitRate - was.cacheHitRate, deltaUnit: 'p.p.',
-        foot: 'įvesties iš podėlio', color: U.token('--series-3')
+        foot: 'of input served from cache', color: U.token('--series-3')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Dažniausias modelis', value: models[0] ? models[0].name : '—',
-        foot: models[0] ? U.dec((models[0].tokens / (now.tokensTotal || 1)) * 100, 0) + ' % žetonų' : '',
+        label: 'Most-used model', value: models[0] ? models[0].name : '—',
+        foot: models[0] ? U.dec((models[0].tokens / (now.tokensTotal || 1)) * 100, 0) + '% of tokens' : '',
         color: U.token('--series-4')
       })])
     ]));
 
-    /* --- Kaštai per laiką pagal modelį -------------------------------------- */
+    /* --- Cost over time by model --------------------------------------------------- */
 
-    frag.appendChild(VH.section('Kaštai per laiką', 'sukrauta pagal modelį — viena ašis, jokių dvigubų skalių'));
+    frag.appendChild(VH.section('Cost over time', 'stacked by model — one axis, never a dual scale'));
 
     var buckets = VH.bucketize(slice, 30);
     var costSeries = Data.MODELS.map(function (m, i) {
@@ -89,8 +89,8 @@ Views.modeliai = (function () {
 
     frag.appendChild(VH.grid([
       VH.col(8, [Chart.card({
-        title: 'Kaštai pagal modelį',
-        sub: 'grupuojama pagal ' + buckets.unit,
+        title: 'Cost by model',
+        sub: 'grouped by ' + buckets.unit,
         legendBefore: Chart.legend(costSeries),
         render: function (w) {
           return Chart.stackedBars(w, {
@@ -106,8 +106,8 @@ Views.modeliai = (function () {
         },
         table: function () {
           return Chart.table(
-            [{ label: 'Laikotarpis' }].concat(costSeries.map(function (s) { return { label: s.name, num: true }; }))
-              .concat([{ label: 'Iš viso', num: true }]),
+            [{ label: 'Period' }].concat(costSeries.map(function (s) { return { label: s.name, num: true }; }))
+              .concat([{ label: 'Total', num: true }]),
             buckets.groups.map(function (g, i) {
               var total = U.sum(costSeries, function (s) { return s.values[i]; });
               return [g.from === g.to ? U.dayLabel(g.from) : U.dayLabel(g.from) + ' – ' + U.dayLabel(g.to)]
@@ -120,44 +120,44 @@ Views.modeliai = (function () {
       VH.col(4, [cumulativeCard(slice)])
     ]));
 
-    /* --- Palyginimo lentelė -------------------------------------------------- */
+    /* --- Comparison table ------------------------------------------------------------ */
 
-    frag.appendChild(VH.section('Modelių palyginimas', 'kiekvieno modelio krūvis, kaina ir efektyvumas'));
+    frag.appendChild(VH.section('Model comparison', 'load, price and efficiency per model'));
 
     frag.appendChild(VH.grid([
       VH.col(7, [modelTable(models, now)]),
       VH.col(5, [ratesCard(R, models)])
     ]));
 
-    /* --- Žetonų tipai pagal modelį ------------------------------------------ */
+    /* --- Token types by model ----------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Žetonų tipai', 'kur iš tikrųjų sukasi apimtis'));
+    frag.appendChild(VH.section('Token types', 'where the volume actually sits'));
     frag.appendChild(VH.grid([VH.col(12, [tokenTypesCard(models)])]));
 
     return frag;
   }
 
-  /* --- Kaupiamieji kaštai --------------------------------------------------- */
+  /* --- Cumulative cost ---------------------------------------------------------------- */
 
   function cumulativeCard(slice) {
     var running = 0;
     var values = slice.map(function (d) { running += Data.dayCost(d); return running; });
     return Chart.card({
-      title: 'Kaupiamieji kaštai',
-      sub: 'kaip suma auga per laikotarpį',
+      title: 'Cumulative cost',
+      sub: 'how the total builds across the period',
       render: function (w) {
         return Chart.lineChart(w, {
           labels: slice.map(function (d) { return U.dayLabel(d.date); }),
           height: 292, area: true, peakLabel: false,
           format: function (v) { return U.money(v); },
           yFormat: function (v) { return '$' + U.compactAxis(v); },
-          series: [{ name: 'Suma', color: U.token('--series-2'), values: values }],
+          series: [{ name: 'Running total', color: U.token('--series-2'), values: values }],
           tipTitle: function (i) { return U.fullDate(slice[i].date); }
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Data' }, { label: 'Tos dienos kaštai', num: true }, { label: 'Suma', num: true }],
+          [{ label: 'Date' }, { label: 'That day', num: true }, { label: 'Running total', num: true }],
           slice.slice().reverse().map(function (d, i) {
             return [U.fullDate(d.date), U.money(Data.dayCost(d)), U.money(values[values.length - 1 - i])];
           })
@@ -166,7 +166,7 @@ Views.modeliai = (function () {
     });
   }
 
-  /* --- Modelių lentelė ------------------------------------------------------ */
+  /* --- Model table ---------------------------------------------------------------------- */
 
   function modelTable(models, now) {
     var maxTokens = Math.max.apply(null, models.map(function (m) { return m.tokens; }).concat([1]));
@@ -187,21 +187,21 @@ Views.modeliai = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Pagal modelį' }),
-          el('p', { class: 'card__sub', text: 'iš viso ' + U.compact(now.tokensTotal) + ' žetonų · ' + U.money(now.cost) })
+          el('h3', { class: 'card__title', text: 'By model' }),
+          el('p', { class: 'card__sub', text: U.compact(now.tokensTotal) + ' tokens · ' + U.money(now.cost) + ' total' })
         ])
       ]),
       el('div', { class: 'card__body' }, [
         el('div', { class: 'table-wrap' }, [
           el('table', { class: 'tbl' }, [
             el('thead', {}, [el('tr', {}, [
-              el('th', { scope: 'col', text: 'Modelis' }),
-              el('th', { class: 'num', scope: 'col', text: 'Žetonai' }),
-              el('th', { class: 'num', scope: 'col', text: 'Įvestis' }),
-              el('th', { class: 'num', scope: 'col', text: 'Išvestis' }),
-              el('th', { class: 'num', scope: 'col', text: 'Kaštai' }),
-              el('th', { class: 'num', scope: 'col', text: '$ / 1k pranešimų' }),
-              el('th', { scope: 'col', text: 'Dalis' })
+              el('th', { scope: 'col', text: 'Model' }),
+              el('th', { class: 'num', scope: 'col', text: 'Tokens' }),
+              el('th', { class: 'num', scope: 'col', text: 'Input' }),
+              el('th', { class: 'num', scope: 'col', text: 'Output' }),
+              el('th', { class: 'num', scope: 'col', text: 'Cost' }),
+              el('th', { class: 'num', scope: 'col', text: '$ / 1k msgs' }),
+              el('th', { scope: 'col', text: 'Share' })
             ])]),
             el('tbody', {}, rows)
           ])
@@ -210,7 +210,7 @@ Views.modeliai = (function () {
     ]);
   }
 
-  /* --- Tarifų kortelė ------------------------------------------------------- */
+  /* --- Rates card ------------------------------------------------------------------------- */
 
   function ratesCard(R, models) {
     var dl = el('dl', { class: 'kv' });
@@ -221,40 +221,40 @@ Views.modeliai = (function () {
       ]));
       dl.appendChild(el('dd', { text: U.money(R[m.id].in, 2) + ' / ' + U.money(R[m.id].out, 2) }));
     });
-    dl.appendChild(el('dt', { text: 'Podėlio skaitymas' }));
-    dl.appendChild(el('dd', { text: '×' + U.dec(R.cacheReadFactor, 2) + ' įvesties' }));
-    dl.appendChild(el('dt', { text: 'Podėlio rašymas' }));
-    dl.appendChild(el('dd', { text: '×' + U.dec(R.cacheWriteFactor, 2) + ' įvesties' }));
+    dl.appendChild(el('dt', { text: 'Cache read' }));
+    dl.appendChild(el('dd', { text: '×' + U.dec(R.cacheReadFactor, 2) + ' input' }));
+    dl.appendChild(el('dt', { text: 'Cache write' }));
+    dl.appendChild(el('dd', { text: '×' + U.dec(R.cacheWriteFactor, 2) + ' input' }));
 
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Naudojami tarifai' }),
-          el('p', { class: 'card__sub', text: '$ už 1 mln. žetonų · įvestis / išvestis' })
+          el('h3', { class: 'card__title', text: 'Rates in use' }),
+          el('p', { class: 'card__sub', text: '$ per 1M tokens · input / output' })
         ]),
         el('div', { class: 'card__tools' }, [
-          el('a', { class: 'link-btn', href: '#/nustatymai', text: 'Keisti' })
+          el('a', { class: 'link-btn', href: '#/settings', text: 'Edit' })
         ])
       ]),
       el('div', { class: 'card__body' }, [
         dl,
         el('div', { style: { marginTop: '14px' } }, [
-          VH.note('Tarifai — prielaida.',
-            'Skydas nežino tavo realių įkainių, todėl skaičiuoja pagal čia įrašytas reikšmes. ' +
-            'Pakeisk jas „Nustatymuose", ir visi kaštai persiskaičiuos.')
+          VH.note('These rates are an assumption.',
+            'The dashboard has no access to your real pricing, so every cost is computed from ' +
+            'the values above. Change them in Settings and all figures recompute.')
         ])
       ])
     ]);
   }
 
-  /* --- Žetonų tipai --------------------------------------------------------- */
+  /* --- Token types ----------------------------------------------------------------------- */
 
   function tokenTypesCard(models) {
     var types = [
-      { key: 'cacheRead', name: 'Podėlio skaitymas' },
-      { key: 'tokensIn', name: 'Įvestis' },
-      { key: 'cacheWrite', name: 'Podėlio rašymas' },
-      { key: 'tokensOut', name: 'Išvestis' }
+      { key: 'cacheRead', name: 'Cache read' },
+      { key: 'tokensIn', name: 'Input' },
+      { key: 'cacheWrite', name: 'Cache write' },
+      { key: 'tokensOut', name: 'Output' }
     ];
     var series = models.map(function (m, i) {
       return {
@@ -263,8 +263,8 @@ Views.modeliai = (function () {
       };
     });
     return Chart.card({
-      title: 'Žetonų tipai pagal modelį',
-      sub: 'sukrauti stulpeliai — kiekvienas tipas viename stulpelyje',
+      title: 'Token types by model',
+      sub: 'stacked bars — one column per token type',
       legendBefore: Chart.legend(series),
       render: function (w) {
         return Chart.stackedBars(w, {
@@ -274,7 +274,7 @@ Views.modeliai = (function () {
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Tipas' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
+          [{ label: 'Type' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
           types.map(function (t, i) {
             return [t.name].concat(series.map(function (s) { return U.num(s.values[i]); }));
           })
@@ -284,8 +284,8 @@ Views.modeliai = (function () {
   }
 
   return {
-    title: 'Modeliai ir kaštai',
-    sub: 'kas dirba ir kiek tai kainuoja',
+    title: 'Models & cost',
+    sub: 'who does the work and what it costs',
     needsRange: true,
     render: render
   };

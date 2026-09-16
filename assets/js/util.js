@@ -1,14 +1,19 @@
 /* =============================================================================
-   util.js — bendros pagalbinės funkcijos (DOM, formatavimas, datos, saugykla)
+   util.js — shared helpers (DOM, formatting, dates, storage)
    ========================================================================== */
 window.U = (function () {
   'use strict';
 
   /* --- DOM ---------------------------------------------------------------- */
 
+  var SVG_TAGS = {
+    g: 1, path: 1, rect: 1, circle: 1, line: 1, text: 1, tspan: 1, polyline: 1,
+    polygon: 1, defs: 1, clipPath: 1, linearGradient: 1, stop: 1, title: 1, ellipse: 1
+  };
+
   /**
-   * Sukuria elementą. Tekstas visada dedamas per textContent — duomenys
-   * (projektų, čempionų pavadinimai) laikomi nepatikimais.
+   * Builds an element. Text always goes through textContent — data such as
+   * project or champion names is treated as untrusted.
    */
   function el(tag, attrs, children) {
     var node = document.createElementNS(
@@ -21,7 +26,7 @@ window.U = (function () {
         if (v === null || v === undefined || v === false) return;
         if (k === 'class') node.setAttribute('class', v);
         else if (k === 'text') node.textContent = String(v);
-        else if (k === 'html') node.innerHTML = v;              // tik vidiniams SVG šablonams
+        else if (k === 'html') node.innerHTML = v;              // internal SVG templates only
         else if (k.slice(0, 2) === 'on' && typeof v === 'function') node.addEventListener(k.slice(2), v);
         else if (k === 'dataset') Object.keys(v).forEach(function (d) { node.dataset[d] = v[d]; });
         else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
@@ -35,94 +40,88 @@ window.U = (function () {
     return node;
   }
 
-  var SVG_TAGS = {
-    g: 1, path: 1, rect: 1, circle: 1, line: 1, text: 1, tspan: 1, polyline: 1,
-    polygon: 1, defs: 1, clipPath: 1, linearGradient: 1, stop: 1, title: 1, ellipse: 1
-  };
-
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
-  /* --- Skaičių formatavimas ----------------------------------------------- */
+  /* --- Number formatting --------------------------------------------------- */
 
-  var LT = 'lt-LT';
+  var LOCALE = 'en-US';
 
-  /** 1 284 · 12,9 tūkst. · 4,2 mln. — kompaktiška didelių skaičių forma. */
+  /** 1,284 · 12.9K · 4.2M — compact form for large numbers. */
   function compact(n, digits) {
     var abs = Math.abs(n);
     var d = digits === undefined ? 1 : digits;
-    if (abs >= 1e9) return trimZero((n / 1e9).toFixed(d)) + ' mlrd.';
-    if (abs >= 1e6) return trimZero((n / 1e6).toFixed(d)) + ' mln.';
-    if (abs >= 1e4) return trimZero((n / 1e3).toFixed(0)) + ' tūkst.';
-    if (abs >= 1e3) return trimZero((n / 1e3).toFixed(d)) + ' tūkst.';
+    if (abs >= 1e9) return trimZero((n / 1e9).toFixed(d)) + 'B';
+    if (abs >= 1e6) return trimZero((n / 1e6).toFixed(d)) + 'M';
+    if (abs >= 1e4) return trimZero((n / 1e3).toFixed(0)) + 'K';
+    if (abs >= 1e3) return trimZero((n / 1e3).toFixed(d)) + 'K';
     return num(Math.round(n));
   }
 
-  /** Kompaktiška forma be vienetų žodžio — ašims. */
+  /** Compact form for axis ticks. */
   function compactAxis(n) {
     var abs = Math.abs(n);
     if (abs >= 1e9) return trimZero((n / 1e9).toFixed(1)) + 'B';
     if (abs >= 1e6) return trimZero((n / 1e6).toFixed(abs >= 1e7 ? 0 : 1)) + 'M';
-    if (abs >= 1e3) return trimZero((n / 1e3).toFixed(abs >= 1e4 ? 0 : 1)) + 'k';
+    if (abs >= 1e3) return trimZero((n / 1e3).toFixed(abs >= 1e4 ? 0 : 1)) + 'K';
     return num(n);
   }
 
-  function trimZero(s) { return String(s).replace(/[.,]0$/, '').replace('.', ','); }
-  function num(n) { return Number(n).toLocaleString(LT); }
-  function dec(n, d) { return Number(n).toLocaleString(LT, { minimumFractionDigits: d, maximumFractionDigits: d }); }
-  function pct(n, d) { return dec(n, d === undefined ? 1 : d) + ' %'; }
+  function trimZero(s) { return String(s).replace(/\.0$/, ''); }
+  function num(n) { return Number(n).toLocaleString(LOCALE); }
+  function dec(n, d) {
+    return Number(n).toLocaleString(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function pct(n, d) { return dec(n, d === undefined ? 1 : d) + '%'; }
   function money(n, d) {
-    return '$' + Number(n).toLocaleString(LT, {
+    return '$' + Number(n).toLocaleString(LOCALE, {
       minimumFractionDigits: d === undefined ? 2 : d,
       maximumFractionDigits: d === undefined ? 2 : d
     });
   }
   function signed(n, fmt) { return (n > 0 ? '+' : n < 0 ? '−' : '') + (fmt || num)(Math.abs(n)); }
 
-  /* --- Datos -------------------------------------------------------------- */
+  /* --- Dates -------------------------------------------------------------- */
 
-  var MONTHS = ['sau.', 'vas.', 'kov.', 'bal.', 'geg.', 'birž.', 'liep.', 'rugp.', 'rugs.', 'spal.', 'lapkr.', 'gruod.'];
-  var WEEKDAYS = ['Pr', 'An', 'Tr', 'Kt', 'Pn', 'Št', 'Sk'];
-  var WEEKDAYS_LONG = ['Pirmadienis', 'Antradienis', 'Trečiadienis', 'Ketvirtadienis', 'Penktadienis', 'Šeštadienis', 'Sekmadienis'];
-  var WEEKDAYS_SHORT = ['Pirmad.', 'Antrad.', 'Trečiad.', 'Ketvirtad.', 'Penktad.', 'Šeštad.', 'Sekmad.'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var WEEKDAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  function iso(d) {
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
   function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function parseISO(s) {
     var p = String(s).split('-');
     return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
   }
-  /** „16 rugs." */
+  /** "Sep 16" */
   function dayLabel(s) {
     var d = parseISO(s);
-    return d.getDate() + ' ' + MONTHS[d.getMonth()];
+    return MONTHS[d.getMonth()] + ' ' + d.getDate();
   }
-  /** „2026 rugs. 16, Tr" */
+  /** "Wed, Sep 16, 2026" */
   function fullDate(s) {
     var d = parseISO(s);
-    return d.getFullYear() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + WEEKDAYS[mondayIndex(d)];
+    return WEEKDAYS[mondayIndex(d)] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
   }
-  /** Pirmadienis = 0 (Lietuvos savaitė). */
+  /** Monday = 0 — the week starts on Monday throughout the dashboard. */
   function mondayIndex(d) { return (d.getDay() + 6) % 7; }
   function addDays(d, n) { var c = new Date(d.getTime()); c.setDate(c.getDate() + n); return c; }
   function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
 
   function relativeDays(s, today) {
     var n = daysBetween(parseISO(s), today || TODAY);
-    if (n === 0) return 'šiandien';
-    if (n === 1) return 'vakar';
-    if (n < 7) return 'prieš ' + n + ' d.';
-    if (n < 30) return 'prieš ' + Math.round(n / 7) + ' sav.';
-    return 'prieš ' + Math.round(n / 30) + ' mėn.';
+    if (n === 0) return 'today';
+    if (n === 1) return 'yesterday';
+    if (n < 7) return n + 'd ago';
+    if (n < 30) return Math.round(n / 7) + 'w ago';
+    return Math.round(n / 30) + 'mo ago';
   }
 
-  /* Fiksuota „šiandien“ – kad demo duomenys būtų nuoseklūs. */
+  /* A fixed "today" keeps the demo dataset internally consistent. */
   var TODAY = new Date(2026, 8, 16);
 
-  /* --- Determinuotas atsitiktinumas (mulberry32) --------------------------- */
+  /* --- Deterministic randomness (mulberry32) ------------------------------- */
 
   function rng(seed) {
     var a = seed >>> 0;
@@ -135,7 +134,7 @@ window.U = (function () {
     };
   }
 
-  /* --- Matematika --------------------------------------------------------- */
+  /* --- Math ---------------------------------------------------------------- */
 
   function sum(arr, f) {
     var t = 0;
@@ -150,7 +149,7 @@ window.U = (function () {
     var step = r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10;
     return step * mag;
   }
-  /** Švarūs ašies tikslai: [0, žingsnis, ... , viršus] */
+  /** Clean axis ticks: [0, step, … , top] */
   function ticks(maxValue, count) {
     var c = count || 4;
     var top = niceCeil(maxValue / c) * c;
@@ -159,9 +158,9 @@ window.U = (function () {
     return out;
   }
 
-  /* --- Vietinė saugykla (atspari privačiam režimui) ------------------------ */
+  /* --- Local storage (safe in private mode) -------------------------------- */
 
-  var PREFIX = 'skydas.';
+  var PREFIX = 'dashboard.';
   var store = {
     get: function (key, fallback) {
       try {
@@ -174,19 +173,19 @@ window.U = (function () {
       catch (e) { return false; }
     },
     remove: function (key) {
-      try { localStorage.removeItem(PREFIX + key); } catch (e) { /* tyliai */ }
+      try { localStorage.removeItem(PREFIX + key); } catch (e) { /* ignore */ }
     }
   };
 
-  /* --- Delta ženkliukas ---------------------------------------------------- */
+  /* --- Delta badge ---------------------------------------------------------- */
 
   var ARROW_UP = 'M6 2.5l4 5H2z';
   var ARROW_DOWN = 'M6 9.5l-4-5h8z';
 
   /**
-   * @param value    pokytis
-   * @param upIsGood ar augimas yra „gerai“ (numatyta – taip)
-   * @param unit     matavimo vienetas; nenurodžius naudojama „%"
+   * @param value    the change
+   * @param upIsGood whether growth reads as good (default: true)
+   * @param unit     unit label; defaults to "%"
    */
   function deltaEl(value, upIsGood, unit) {
     var good = upIsGood === undefined ? true : upIsGood;
@@ -199,17 +198,16 @@ window.U = (function () {
       ]));
     }
     kids.push(document.createTextNode(
-      (dir === 'flat' ? '±' : '') + dec(Math.abs(value), 1) + ' ' + (unit || '%')
+      (dir === 'flat' ? '±' : '') + dec(Math.abs(value), 1) + (unit ? ' ' + unit : '%')
     ));
     return el('span', { class: 'delta delta--' + cls }, kids);
   }
 
-  /* --- Serijų spalvos ------------------------------------------------------ */
+  /* --- Series colours ------------------------------------------------------- */
 
-  /** Grąžina realią CSS reikšmę — SVG ir tooltip'ams reikia hex, ne var(). */
+  /** Resolves to a real CSS value — SVG and tooltips need hex, not var(). */
   function seriesColor(i) {
-    var name = '--series-' + ((i % 8) + 1);
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return token('--series-' + ((i % 8) + 1));
   }
   function token(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -219,8 +217,8 @@ window.U = (function () {
     el: el, clear: clear, qs: qs, qsa: qsa,
     num: num, dec: dec, pct: pct, money: money, compact: compact, compactAxis: compactAxis, signed: signed,
     iso: iso, parseISO: parseISO, dayLabel: dayLabel, fullDate: fullDate, mondayIndex: mondayIndex,
-    addDays: addDays, daysBetween: daysBetween, relativeDays: relativeDays,
-    MONTHS: MONTHS, WEEKDAYS: WEEKDAYS, WEEKDAYS_LONG: WEEKDAYS_LONG, WEEKDAYS_SHORT: WEEKDAYS_SHORT, TODAY: TODAY,
+    addDays: addDays, daysBetween: daysBetween, relativeDays: relativeDays, pad: pad,
+    MONTHS: MONTHS, WEEKDAYS: WEEKDAYS, WEEKDAYS_LONG: WEEKDAYS_LONG, TODAY: TODAY,
     rng: rng, sum: sum, clamp: clamp, niceCeil: niceCeil, ticks: ticks,
     store: store, deltaEl: deltaEl, seriesColor: seriesColor, token: token
   };

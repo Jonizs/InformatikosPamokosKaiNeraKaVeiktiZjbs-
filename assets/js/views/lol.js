@@ -1,5 +1,5 @@
 /* =============================================================================
-   views/lol.js — 2 skirtukas: LoL pataisos ir Emerald+ meta
+   views/lol.js — tab 2: League of Legends patches and the Emerald+ meta
    ========================================================================== */
 Views.lol = (function () {
   'use strict';
@@ -10,30 +10,29 @@ Views.lol = (function () {
   function render(state) {
     var role = state.lolRole || 'ALL';
     var champs = LoL.byRole(role);
-    var sum = LoL.summary();
     var patch = LoL.current;
     var frag = document.createDocumentFragment();
 
-    /* --- Filtrų eilutė: viena, virš viso turinio ---------------------------- */
+    /* --- Filter row: one row, above everything it scopes -------------------- */
 
     frag.appendChild(el('div', { class: 'grid', style: { marginBottom: '2px' } }, [
       el('div', { class: 'col-12' }, [
         el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } }, [
           VH.segmented(
-            [{ value: 'ALL', label: 'Visos' }].concat(LoL.ROLES.map(function (r) {
+            [{ value: 'ALL', label: 'All roles' }].concat(LoL.ROLES.map(function (r) {
               return { value: r.id, label: r.name };
             })),
             role,
             function (v) { state.lolRole = v; App.rerender(); },
-            'Pozicija'
+            'Role'
           ),
-          el('span', { class: 'chip', text: 'Emerald+ · ranguotos solo/duo' }),
-          el('span', { class: 'chip', text: 'Pataisa ' + patch.version })
+          el('span', { class: 'chip', text: 'Emerald+ · ranked solo/duo' }),
+          el('span', { class: 'chip', text: 'Patch ' + patch.version })
         ])
       ])
     ]));
 
-    /* --- Plytelės ----------------------------------------------------------- */
+    /* --- Tiles --------------------------------------------------------------- */
 
     var best = champs.slice().sort(function (a, b) { return b.wr - a.wr; })[0];
     var mostBanned = champs.slice().sort(function (a, b) { return b.br - a.br; })[0];
@@ -42,81 +41,171 @@ Views.lol = (function () {
 
     frag.appendChild(VH.grid([
       VH.col(3, [VH.tile({
-        label: 'Aukščiausias winrate', value: U.dec(best.wr, 1), unit: ' %',
-        delta: best.d, foot: best.name + ' · ' + LoL.roleName(best.role),
+        label: 'Highest win rate', value: U.dec(best.wr, 1), unit: '%',
+        delta: best.d, deltaUnit: 'pp', foot: best.name + ' · ' + LoL.roleName(best.role),
         color: U.token('--series-6')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Labiausiai pakilęs', value: U.signed(climber.d, function (v) { return U.dec(v, 1); }), unit: ' p.p.',
-        foot: climber.name + ' · dabar ' + U.dec(climber.wr, 1) + ' %',
+        label: 'Biggest riser', value: U.signed(climber.d, function (v) { return U.dec(v, 1); }), unit: ' pp',
+        foot: climber.name + ' · now ' + U.dec(climber.wr, 1) + '%',
         color: U.token('--series-3')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Dažniausiai banintas', value: U.dec(mostBanned.br, 1), unit: ' %',
-        foot: mostBanned.name, color: U.token('--series-8')
+        label: 'Most banned', value: U.dec(mostBanned.br, 1), unit: '%',
+        foot: mostBanned.name + ' · wins ' + U.dec(mostBanned.wr, 1) + '%',
+        color: U.token('--series-8')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Žaidimų imtis', value: U.compact(games),
-        foot: champs.length + ' čempionai analizėje', color: U.token('--series-1')
+        label: 'Sample size', value: U.compact(games), unit: ' games',
+        foot: champs.length + ' champions analysed', color: U.token('--series-1')
       })])
     ]));
 
-    /* --- Naujausia pataisa --------------------------------------------------- */
+    /* --- The written read ---------------------------------------------------- */
 
-    frag.appendChild(VH.section('Naujos pataisos', 'kas pasikeitė paskutiniuose atnaujinimuose'));
+    frag.appendChild(VH.section('Patch ' + patch.version + ' analysis', 'what the numbers are actually saying'));
+    frag.appendChild(VH.grid([
+      VH.col(8, [analysisCard()]),
+      VH.col(4, [watchlistCard(), caveatsCard()])
+    ]));
+
+    /* --- Patch history ------------------------------------------------------- */
+
+    frag.appendChild(VH.section('Recent patches', 'what changed in the last six updates'));
     frag.appendChild(VH.grid([
       VH.col(7, [patchCard()]),
       VH.col(5, [patchImpactCard(patch)])
     ]));
 
-    /* --- Didžiausias winrate ------------------------------------------------- */
+    /* --- Highest win rates --------------------------------------------------- */
 
     frag.appendChild(VH.section(
-      'Didžiausio winrate čempionai',
-      role === 'ALL' ? 'visos pozicijos' : LoL.roleName(role) + ' · Emerald+'
+      'Highest win rates',
+      role === 'ALL' ? 'all roles' : LoL.roleName(role) + ' · Emerald+'
     ));
 
     frag.appendChild(VH.grid([
-      VH.col(7, [winrateCard(champs, role)]),
+      VH.col(7, [winrateCard(champs)]),
       VH.col(5, [moversCard(champs)])
     ]));
 
-    /* --- Sklaida: winrate vs pickrate ---------------------------------------- */
+    /* --- Win rate vs pick rate ----------------------------------------------- */
 
     frag.appendChild(VH.grid([
-      VH.col(12, [scatterCard(champs, role)])
+      VH.col(12, [scatterCard(champs)])
     ]));
 
-    /* --- Pilna lentelė -------------------------------------------------------- */
+    /* --- Full table ---------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Pilna lentelė', 'rikiuojama pagal bet kurį stulpelį'));
+    frag.appendChild(VH.section('Full table', 'sortable on any column'));
     frag.appendChild(VH.grid([VH.col(12, [champTable(champs, state)])]));
 
-    /* --- Meta judėjimas per pataisas ------------------------------------------ */
+    /* --- Meta movement ------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Meta judėjimas', 'trijų didžiausių kilėjų winrate per 6 pataisas'));
+    frag.appendChild(VH.section('Meta movement', 'the three biggest risers across six patches'));
     frag.appendChild(VH.grid([VH.col(12, [trendCard(champs)])]));
 
     frag.appendChild(el('div', { style: { marginTop: '16px' } }, [
-      VH.note('Demo duomenys.',
-        'Pataisų turinys ir winrate skaičiai čia yra pavyzdiniai — svetainė veikia be interneto. ' +
-        'Kaip prijungti realų Riot ar U.GG šaltinį, aprašyta „Nustatymų" skirtuke.')
+      VH.note('Demo data.',
+        'The patch notes and win rates here are illustrative so the site runs offline. ' +
+        'The Settings tab explains how to point this at a real Riot or U.GG source.')
     ]));
 
     return frag;
   }
 
-  /* --- Pataisų sąrašas ------------------------------------------------------- */
+  /* --- The analysis article -------------------------------------------------- */
 
-  var TYPE_LABEL = { buff: 'Sustiprintas', nerf: 'Susilpnintas', adjust: 'Perbalansuotas', system: 'Sistema' };
-  /* Būsenos spalva niekada nenešioja reikšmės viena — šalia visada ženklas */
+  function analysisCard() {
+    var A = LoL.ANALYSIS;
+    var body = el('div', { class: 'card__body' });
+
+    body.appendChild(el('p', { class: 'article__kicker' }, [
+      document.createTextNode(A.kicker),
+      el('span', { class: 'article__kicker-sep', text: '·' }),
+      el('span', { class: 'article__kicker-patch', text: 'Patch ' + A.patch })
+    ]));
+    body.appendChild(el('h2', { class: 'article__headline', text: A.headline }));
+    body.appendChild(el('p', { class: 'article__standfirst', text: A.standfirst }));
+    body.appendChild(el('p', { class: 'article__byline',
+      text: 'Method: win rate vs pick rate, ban-rate lag, one-trick selection bias, ' +
+            'and reading the patch arc rather than a single patch.' }));
+
+    A.takes.forEach(function (t, i) {
+      body.appendChild(el('section', { class: 'take' }, [
+        el('div', { class: 'take__head' }, [
+          el('span', { class: 'take__num', text: String(i + 1) }),
+          el('h3', { class: 'take__title', text: t.title })
+        ]),
+        el('p', { class: 'take__body', text: t.body }),
+        el('p', { class: 'take__evidence' }, [
+          el('span', { class: 'take__evidence-label', text: 'In the data' }),
+          document.createTextNode(t.evidence)
+        ])
+      ]));
+    });
+
+    /* No card header: the kicker and headline are this card's header. */
+    return el('div', { class: 'card card--article' }, [body]);
+  }
+
+  var VERDICT_CLASS = {
+    'Buy': 'good', 'Buy now': 'good', 'Sell': 'bad',
+    'Careful': 'warn', 'Stop banning': 'warn'
+  };
+
+  function watchlistCard() {
+    var list = el('div', { class: 'list' });
+    LoL.ANALYSIS.watchlist.forEach(function (w) {
+      var champ = LoL.byName(w.name);
+      list.appendChild(el('div', { class: 'list__row' }, [
+        el('div', { class: 'list__main' }, [
+          champ ? VH.champCell(champ, U.dec(champ.wr, 1) + '% win · ' + U.dec(champ.pr, 1) + '% pick')
+                : el('div', { class: 'list__title', text: w.name }),
+          el('p', { class: 'list__meta', style: { marginTop: '6px' }, text: w.note })
+        ]),
+        el('span', { class: 'verdict verdict--' + (VERDICT_CLASS[w.verdict] || 'warn'), text: w.verdict })
+      ]));
+    });
+
+    return el('div', { class: 'card' }, [
+      el('div', { class: 'card__head' }, [
+        el('div', { class: 'card__titles' }, [
+          el('h3', { class: 'card__title', text: 'Watchlist' }),
+          el('p', { class: 'card__sub', text: 'where the gap between perception and result is widest' })
+        ])
+      ]),
+      el('div', { class: 'card__body' }, [list])
+    ]);
+  }
+
+  function caveatsCard() {
+    var ul = el('ul', { class: 'caveats' });
+    LoL.ANALYSIS.caveats.forEach(function (c) {
+      ul.appendChild(el('li', { text: c }));
+    });
+    return el('div', { class: 'card', style: { marginTop: '14px' } }, [
+      el('div', { class: 'card__head' }, [
+        el('div', { class: 'card__titles' }, [
+          el('h3', { class: 'card__title', text: 'What would make this wrong' }),
+          el('p', { class: 'card__sub', text: 'the limits of the reading above' })
+        ])
+      ]),
+      el('div', { class: 'card__body' }, [ul])
+    ]);
+  }
+
+  /* --- Patch list ------------------------------------------------------------ */
+
+  var TYPE_LABEL = { buff: 'Buffed', nerf: 'Nerfed', adjust: 'Adjusted', system: 'System' };
+  /* A status colour never carries meaning alone — a glyph always rides along */
   var TYPE_GLYPH = { buff: '▲', nerf: '▼', adjust: '±', system: '⚙' };
 
   function patchCard() {
     var box = el('div', { class: 'list' });
 
     LoL.PATCHES.forEach(function (p, idx) {
-      var open = idx === 0;                       /* dabartinė — atverta */
+      var open = idx === 0;                       /* the current patch starts open */
       var details = el('div', {}, [
         el('p', { class: 'patch__note', text: p.summary }),
         changeChips(p)
@@ -125,17 +214,15 @@ Views.lol = (function () {
 
       var toggle = el('button', {
         class: 'link-btn', type: 'button', 'aria-expanded': String(open),
-        text: open ? 'Suskleisti' : p.changes.length + ' pakeitimai'
+        text: open ? 'Collapse' : p.changes.length + ' changes'
       });
 
-      var head = el('div', { class: 'patch__head' }, [
-        el('span', { class: 'patch__ver', text: p.version }),
-        el('span', { class: 'patch__date', text: U.fullDate(p.date) + ' · ' + U.relativeDays(p.date) }),
-        p.current ? el('span', { class: 'patch__tag', text: 'Dabartinė' }) : null
-      ]);
-
       var row = el('div', { class: 'patch' }, [
-        head,
+        el('div', { class: 'patch__head' }, [
+          el('span', { class: 'patch__ver', text: p.version }),
+          el('span', { class: 'patch__date', text: U.fullDate(p.date) + ' · ' + U.relativeDays(p.date) }),
+          p.current ? el('span', { class: 'patch__tag', text: 'Current' }) : null
+        ]),
         el('div', { style: { display: 'flex', alignItems: 'baseline', gap: '12px' } }, [
           el('p', { class: 'card__title', style: { flex: '1' }, text: p.title }),
           toggle
@@ -147,7 +234,7 @@ Views.lol = (function () {
         open = !open;
         details.hidden = !open;
         toggle.setAttribute('aria-expanded', String(open));
-        toggle.textContent = open ? 'Suskleisti' : p.changes.length + ' pakeitimai';
+        toggle.textContent = open ? 'Collapse' : p.changes.length + ' changes';
       });
 
       box.appendChild(row);
@@ -156,8 +243,8 @@ Views.lol = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Pataisų istorija' }),
-          el('p', { class: 'card__sub', text: 'užvesk pelę ant čempiono — pamatysi tikslų pakeitimą' })
+          el('h3', { class: 'card__title', text: 'Patch history' }),
+          el('p', { class: 'card__sub', text: 'hover a champion to see the exact change' })
         ]),
         el('div', { class: 'card__tools' }, [
           el('span', { class: 'chip chip--buff', text: TYPE_GLYPH.buff + ' buff' }),
@@ -181,51 +268,49 @@ Views.lol = (function () {
     return chips;
   }
 
-  /* --- Pataisos poveikis ------------------------------------------------------ */
+  /* --- Patch impact ---------------------------------------------------------- */
 
   function patchImpactCard(patch) {
     var counts = { buff: 0, nerf: 0, adjust: 0, system: 0 };
     patch.changes.forEach(function (c) { counts[c.type]++; });
     var slices = [
-      { name: 'Sustiprinimai', value: counts.buff, color: U.seriesColor(2) },
-      { name: 'Susilpninimai', value: counts.nerf, color: U.seriesColor(7) },
-      { name: 'Perbalansavimai', value: counts.adjust, color: U.seriesColor(3) },
-      { name: 'Sistemos pokyčiai', value: counts.system, color: U.seriesColor(6) }
+      { name: 'Buffs', value: counts.buff, color: U.seriesColor(2) },
+      { name: 'Nerfs', value: counts.nerf, color: U.seriesColor(7) },
+      { name: 'Adjustments', value: counts.adjust, color: U.seriesColor(3) },
+      { name: 'System changes', value: counts.system, color: U.seriesColor(6) }
     ].filter(function (s) { return s.value > 0; });
 
-    var changed = patch.changes.map(function (c) { return c.champ; });
-
     return Chart.card({
-      title: 'Pataisa ' + patch.version,
-      sub: patch.changes.length + ' pakeitimai · ' + U.fullDate(patch.date),
+      title: 'Patch ' + patch.version,
+      sub: patch.changes.length + ' changes · ' + U.fullDate(patch.date),
       legendAfter: Chart.legend(slices.map(function (s) {
         return { name: s.name, color: s.color, note: String(s.value) };
       })),
       render: function (w) {
         return Chart.donut(w, {
-          size: 180, slices: slices, valueName: 'Pakeitimai',
-          centerValue: String(patch.changes.length), centerLabel: 'pakeitimai'
+          size: 180, slices: slices, valueName: 'Changes',
+          centerValue: String(patch.changes.length), centerLabel: 'changes'
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Tipas' }, { label: 'Taikinys' }, { label: 'Pakeitimas' }],
+          [{ label: 'Type' }, { label: 'Target' }, { label: 'Change' }],
           patch.changes.map(function (c) { return [TYPE_LABEL[c.type], c.champ, c.note]; })
         );
       }
     });
   }
 
-  /* --- Winrate stulpeliai ------------------------------------------------------ */
+  /* --- Win rate as a deviation from 50% -------------------------------------- */
 
-  function winrateCard(champs, role) {
+  function winrateCard(champs) {
     var top = champs.slice().sort(function (a, b) { return b.wr - a.wr; }).slice(0, 10);
     return Chart.card({
-      title: 'Top 10 pagal winrate',
-      sub: 'nuokrypis nuo 50 % — bazinė linija yra tikra nulinė reikšmė, ne nukirpta ašis',
+      title: 'Top 10 by win rate',
+      sub: 'shown as deviation from 50% — a real zero baseline, not a truncated axis',
       legendAfter: Chart.legend([
-        { name: 'Virš 50 %', color: U.token('--series-1') },
-        { name: 'Žemiau 50 %', color: U.token('--series-8') }
+        { name: 'Above 50%', color: U.token('--series-1') },
+        { name: 'Below 50%', color: U.token('--series-8') }
       ]),
       render: function (w) {
         return Chart.divergingBarsH(w, {
@@ -234,41 +319,41 @@ Views.lol = (function () {
               label: c.name,
               value: Math.round((c.wr - 50) * 100) / 100,
               wr: c.wr, champ: c,
-              note: 'pick ' + U.dec(c.pr, 1) + ' % · ban ' + U.dec(c.br, 1) + ' % · ' + U.compact(c.games) + ' žaidimų'
+              note: 'pick ' + U.dec(c.pr, 1) + '% · ban ' + U.dec(c.br, 1) + '% · ' + U.compact(c.games) + ' games'
             };
           }),
           baseline: 50,
-          baselineLabel: '50 %',
+          baselineLabel: '50%',
           zeroAt: 0.22,
           rowHeight: 34, labelWidth: 112, valueWidth: 66,
-          format: function (v) { return U.signed(v, function (x) { return U.dec(x, 1); }) + ' p.p.'; },
-          absoluteFormat: function (r) { return U.dec(r.wr, 1) + ' %'; },
+          format: function (v) { return U.signed(v, function (x) { return U.dec(x, 1); }) + ' pp'; },
+          absoluteFormat: function (r) { return U.dec(r.wr, 1) + '%'; },
           tipRows: function (r) {
             return [
-              { name: 'Winrate', value: U.dec(r.wr, 1) + ' %',
+              { name: 'Win rate', value: U.dec(r.wr, 1) + '%',
                 color: U.token(r.value >= 0 ? '--series-1' : '--series-8') },
-              { name: 'Nuokrypis', value: U.signed(r.value, function (x) { return U.dec(x, 1); }) + ' p.p.' },
-              { name: 'Pozicija', value: LoL.roleName(r.champ.role) }
+              { name: 'Deviation', value: U.signed(r.value, function (x) { return U.dec(x, 1); }) + ' pp' },
+              { name: 'Role', value: LoL.roleName(r.champ.role) }
             ];
           }
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Čempionas' }, { label: 'Pozicija' }, { label: 'Winrate', num: true },
-           { label: 'Nuokrypis nuo 50 %', num: true }, { label: 'Pickrate', num: true },
-           { label: 'Žaidimai', num: true }],
+          [{ label: 'Champion' }, { label: 'Role' }, { label: 'Win rate', num: true },
+           { label: 'Deviation from 50%', num: true }, { label: 'Pick rate', num: true },
+           { label: 'Games', num: true }],
           top.map(function (c) {
-            return [c.name, LoL.roleName(c.role), U.dec(c.wr, 1) + ' %',
-                    U.signed(c.wr - 50, function (x) { return U.dec(x, 1); }) + ' p.p.',
-                    U.dec(c.pr, 1) + ' %', U.num(c.games)];
+            return [c.name, LoL.roleName(c.role), U.dec(c.wr, 1) + '%',
+                    U.signed(c.wr - 50, function (x) { return U.dec(x, 1); }) + ' pp',
+                    U.dec(c.pr, 1) + '%', U.num(c.games)];
           })
         );
       }
     });
   }
 
-  /* --- Kilėjai ir kritėjai ------------------------------------------------------ */
+  /* --- Risers and fallers ----------------------------------------------------- */
 
   function moversCard(champs) {
     var sorted = champs.slice().sort(function (a, b) { return b.d - a.d; });
@@ -280,9 +365,9 @@ Views.lol = (function () {
       list.forEach(function (c) {
         box.appendChild(el('div', { class: 'list__row' }, [
           el('div', { class: 'list__main' }, [
-            VH.champCell(c, U.dec(c.wr, 1) + ' % winrate · ' + LoL.roleName(c.role))
+            VH.champCell(c, U.dec(c.wr, 1) + '% win rate · ' + LoL.roleName(c.role))
           ]),
-          el('div', { class: 'list__val' }, [U.deltaEl(c.d, true, 'p.p.')])
+          el('div', { class: 'list__val' }, [U.deltaEl(c.d, true, 'pp')])
         ]));
       });
       return box;
@@ -291,28 +376,28 @@ Views.lol = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Kilėjai ir kritėjai' }),
-          el('p', { class: 'card__sub', text: 'winrate pokytis nuo praėjusios pataisos' })
+          el('h3', { class: 'card__title', text: 'Risers and fallers' }),
+          el('p', { class: 'card__sub', text: 'win-rate change since the previous patch' })
         ])
       ]),
       el('div', { class: 'card__body' }, [
-        el('p', { class: 'card__sub', style: { marginBottom: '4px' }, text: 'Kyla' }),
+        el('p', { class: 'card__sub', style: { marginBottom: '4px' }, text: 'Rising' }),
         rows(up),
-        el('p', { class: 'card__sub', style: { margin: '16px 0 4px' }, text: 'Krenta' }),
+        el('p', { class: 'card__sub', style: { margin: '16px 0 4px' }, text: 'Falling' }),
         rows(down)
       ])
     ]);
   }
 
-  /* --- Sklaida ------------------------------------------------------------------ */
+  /* --- Scatter ----------------------------------------------------------------- */
 
-  function scatterCard(champs, role) {
+  function scatterCard(champs) {
     var labelTop = champs.slice().sort(function (a, b) { return b.wr - a.wr; }).slice(0, 3)
       .map(function (c) { return c.name; });
 
     return Chart.card({
-      title: 'Winrate prieš pickrate',
-      sub: 'viršuje dešinėje — stiprūs ir populiarūs; viršuje kairėje — nišiniai perliukai',
+      title: 'Win rate vs pick rate',
+      sub: 'top right — strong and popular; top left — the picks nobody has caught up to yet',
       render: function (w) {
         return Chart.scatter(w, {
           points: champs.map(function (c) {
@@ -320,53 +405,52 @@ Views.lol = (function () {
           }),
           height: 320,
           color: U.token('--series-1'),
-          xLabel: 'Pickrate, %',
-          yLabel: 'Winrate, %',
-          xFormat: function (v) { return U.dec(v, 0) + ' %'; },
-          yFormat: function (v) { return U.dec(v, 1) + ' %'; },
-          refY: 50, refLabel: '50 % — pusiausvyra',
+          xLabel: 'Pick rate, %',
+          yLabel: 'Win rate, %',
+          xFormat: function (v) { return U.dec(v, 0) + '%'; },
+          yFormat: function (v) { return U.dec(v, 1) + '%'; },
+          refY: 50, refLabel: '50% — even',
           labelTop: labelTop,
           tipRows: function (p) {
             return [
-              { name: 'Winrate', value: U.dec(p.champ.wr, 1) + ' %', color: U.token('--series-1') },
-              { name: 'Pickrate', value: U.dec(p.champ.pr, 1) + ' %' },
-              { name: 'Banrate', value: U.dec(p.champ.br, 1) + ' %' },
-              { name: 'Pozicija', value: LoL.roleName(p.champ.role) }
+              { name: 'Win rate', value: U.dec(p.champ.wr, 1) + '%', color: U.token('--series-1') },
+              { name: 'Pick rate', value: U.dec(p.champ.pr, 1) + '%' },
+              { name: 'Ban rate', value: U.dec(p.champ.br, 1) + '%' },
+              { name: 'Role', value: LoL.roleName(p.champ.role) }
             ];
           }
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Čempionas' }, { label: 'Pozicija' }, { label: 'Winrate', num: true },
-           { label: 'Pickrate', num: true }, { label: 'Banrate', num: true }],
+          [{ label: 'Champion' }, { label: 'Role' }, { label: 'Win rate', num: true },
+           { label: 'Pick rate', num: true }, { label: 'Ban rate', num: true }],
           champs.slice().sort(function (a, b) { return b.wr - a.wr; }).map(function (c) {
-            return [c.name, LoL.roleName(c.role), U.dec(c.wr, 1) + ' %',
-                    U.dec(c.pr, 1) + ' %', U.dec(c.br, 1) + ' %'];
+            return [c.name, LoL.roleName(c.role), U.dec(c.wr, 1) + '%',
+                    U.dec(c.pr, 1) + '%', U.dec(c.br, 1) + '%'];
           })
         );
       }
     });
   }
 
-  /* --- Pilna lentelė ------------------------------------------------------------ */
+  /* --- Full table --------------------------------------------------------------- */
 
   function champTable(champs, state) {
     var COLS = [
-      { key: 'name', label: 'Čempionas' },
-      { key: 'role', label: 'Pozicija' },
-      { key: 'tier', label: 'Pakopa' },
-      { key: 'wr', label: 'Winrate', num: true },
-      { key: 'pr', label: 'Pickrate', num: true },
-      { key: 'br', label: 'Banrate', num: true },
-      { key: 'd', label: 'Pokytis', num: true },
-      { key: 'games', label: 'Žaidimai', num: true }
+      { key: 'name', label: 'Champion' },
+      { key: 'role', label: 'Role' },
+      { key: 'tier', label: 'Tier' },
+      { key: 'wr', label: 'Win rate', num: true },
+      { key: 'pr', label: 'Pick rate', num: true },
+      { key: 'br', label: 'Ban rate', num: true },
+      { key: 'd', label: 'Change', num: true },
+      { key: 'games', label: 'Games', num: true }
     ];
     var TIER_ORDER = { S: 4, A: 3, B: 2, C: 1 };
-    var PAGE = 25;                                /* ilgą sąrašą atveria mygtukas */
+    var PAGE = 25;                                /* a button opens the long tail */
 
     var wrapper = el('div', { class: 'table-wrap' });
-    var query = state.lolQuery || '';
 
     var search = el('label', { class: 'search' }, [
       el('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
@@ -374,8 +458,8 @@ Views.lol = (function () {
         el('path', { d: 'M20 20l-4-4', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round' })
       ]),
       el('input', {
-        class: 'input', type: 'search', placeholder: 'Ieškoti čempiono…', value: query,
-        'aria-label': 'Ieškoti čempiono',
+        class: 'input', type: 'search', placeholder: 'Search champions…', value: state.lolQuery || '',
+        'aria-label': 'Search champions',
         oninput: function (e) { state.lolQuery = e.target.value; state.lolShowAll = false; draw(); }
       })
     ]);
@@ -383,8 +467,8 @@ Views.lol = (function () {
     var card = el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Čempionų lentelė' }),
-          el('p', { class: 'card__sub', text: 'Emerald+ · pataisa ' + LoL.current.version })
+          el('h3', { class: 'card__title', text: 'Champion table' }),
+          el('p', { class: 'card__sub', text: 'Emerald+ · patch ' + LoL.current.version })
         ]),
         el('div', { class: 'card__tools' }, [search])
       ]),
@@ -400,7 +484,7 @@ Views.lol = (function () {
         var k = sortState.key;
         var av = k === 'tier' ? TIER_ORDER[a.tier] : a[k];
         var bv = k === 'tier' ? TIER_ORDER[b.tier] : b[k];
-        if (typeof av === 'string') return av.localeCompare(bv, 'lt') * sortState.dir * -1;
+        if (typeof av === 'string') return av.localeCompare(bv, 'en') * sortState.dir * -1;
         return (av - bv) * sortState.dir;
       });
 
@@ -422,17 +506,17 @@ Views.lol = (function () {
           el('td', { class: 'name' }, [VH.champCell(c, false)]),
           el('td', { text: LoL.roleName(c.role) }),
           el('td', {}, [el('span', { class: 'tier tier--' + c.tier, title: LoL.TIER_LABEL[c.tier], text: c.tier })]),
-          el('td', { class: 'num', text: U.dec(c.wr, 1) + ' %' }),
-          el('td', { class: 'num', text: U.dec(c.pr, 1) + ' %' }),
-          el('td', { class: 'num', text: U.dec(c.br, 1) + ' %' }),
-          el('td', { class: 'num' }, [U.deltaEl(c.d, true, 'p.p.')]),
+          el('td', { class: 'num', text: U.dec(c.wr, 1) + '%' }),
+          el('td', { class: 'num', text: U.dec(c.pr, 1) + '%' }),
+          el('td', { class: 'num', text: U.dec(c.br, 1) + '%' }),
+          el('td', { class: 'num' }, [U.deltaEl(c.d, true, 'pp')]),
           el('td', { class: 'num', text: U.num(c.games) })
         ]);
       }));
 
       U.clear(wrapper);
       if (!rows.length) {
-        wrapper.appendChild(el('p', { class: 'empty', text: 'Nieko nerasta pagal „' + q + '".' }));
+        wrapper.appendChild(el('p', { class: 'empty', text: 'Nothing matches “' + q + '”.' }));
         return;
       }
       wrapper.appendChild(el('table', { class: 'tbl' }, [thead, tbody]));
@@ -440,7 +524,7 @@ Views.lol = (function () {
         wrapper.appendChild(el('div', { style: { padding: '12px 0 0', textAlign: 'center' } }, [
           el('button', {
             class: 'btn', type: 'button',
-            text: 'Rodyti visus (' + rows.length + ')',
+            text: 'Show all ' + rows.length,
             onclick: function () { state.lolShowAll = true; draw(); }
           })
         ]));
@@ -450,10 +534,10 @@ Views.lol = (function () {
     return card;
   }
 
-  /* --- Meta judėjimas per pataisas ---------------------------------------------- */
+  /* --- Meta movement across patches --------------------------------------------- */
 
   function trendCard(champs) {
-    /* Tik trys serijos — sklaidos/daugiaserijinėms formoms galioja 3 spalvų riba */
+    /* Three series only — the all-pairs colour cap applies to multi-line forms */
     var picks = champs.slice().sort(function (a, b) { return b.d - a.d; }).slice(0, 3);
     var labels = LoL.PATCHES.slice().reverse().map(function (p) { return p.version; });
     var series = picks.map(function (c, i) {
@@ -461,23 +545,23 @@ Views.lol = (function () {
     });
 
     return Chart.card({
-      title: 'Winrate per pataisas',
-      sub: 'ašis priartinta prie 50 % — svarbi kryptis, ne atstumas iki nulio',
+      title: 'Win rate across patches',
+      sub: 'the axis is zoomed near 50% — direction is the point here, not distance from zero',
       legendBefore: Chart.legend(series, 'line'),
       render: function (w) {
         return Chart.lineChart(w, {
           labels: labels, height: 280, peakLabel: false, zoomY: true,
-          format: function (v) { return U.dec(v, 1) + ' %'; },
-          yFormat: function (v) { return U.dec(v, 0) + ' %'; },
+          format: function (v) { return U.dec(v, 1) + '%'; },
+          yFormat: function (v) { return U.dec(v, 0) + '%'; },
           series: series,
-          tipTitle: function (i) { return 'Pataisa ' + labels[i]; }
+          tipTitle: function (i) { return 'Patch ' + labels[i]; }
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Pataisa' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
+          [{ label: 'Patch' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
           labels.map(function (l, i) {
-            return [l].concat(series.map(function (s) { return U.dec(s.values[i], 1) + ' %'; }));
+            return [l].concat(series.map(function (s) { return U.dec(s.values[i], 1) + '%'; }));
           })
         );
       }
@@ -486,7 +570,7 @@ Views.lol = (function () {
 
   return {
     title: 'League of Legends',
-    sub: 'pataisos ir Emerald+ meta',
+    sub: 'patches and the Emerald+ meta',
     needsRange: false,
     render: render
   };

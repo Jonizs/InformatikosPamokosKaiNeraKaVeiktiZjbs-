@@ -1,12 +1,12 @@
 /* =============================================================================
-   lol-data.js — League of Legends pataisos ir Emerald+ meta.
+   lol-data.js — League of Legends patches and the Emerald+ meta.
 
-   ĮSPĖJIMAS: tai DEMO rinkinys, sudėtas ranka, kad skydas veiktų neprisijungus.
-   Skaičiai NĖRA gyva Riot statistika. Realų šaltinį prijungsi pakeisdamas
-   `LoL.load()` — laukiama tos pačios struktūros (žr. „Nustatymai").
+   NOTE: this is a DEMO dataset, hand-assembled so the dashboard runs offline.
+   The numbers are NOT live Riot statistics. To wire a real source, replace
+   `LoL.load()` — the same shape is expected (see the Settings tab).
 
-   Čempionų paveikslėliai imami iš Riot Data Dragon CDN; nepavykus krautis,
-   rodomos inicialų plytelės (svetainė veikia ir be interneto).
+   Champion portraits come from Riot's Data Dragon CDN; if they fail to load,
+   initial tiles are shown instead, so the site works with no network at all.
    ========================================================================== */
 window.LoL = (function () {
   'use strict';
@@ -17,103 +17,103 @@ window.LoL = (function () {
   };
 
   var ROLES = [
-    { id: 'TOP', name: 'Viršus' },
-    { id: 'JUNGLE', name: 'Miškas' },
-    { id: 'MID', name: 'Vidurys' },
-    { id: 'ADC', name: 'Šaulys' },
-    { id: 'SUPPORT', name: 'Palaikymas' }
+    { id: 'TOP', name: 'Top' },
+    { id: 'JUNGLE', name: 'Jungle' },
+    { id: 'MID', name: 'Mid' },
+    { id: 'ADC', name: 'ADC' },
+    { id: 'SUPPORT', name: 'Support' }
   ];
 
-  var TIER_LABEL = { S: 'S pakopa', A: 'A pakopa', B: 'B pakopa', C: 'C pakopa' };
+  var TIER_LABEL = { S: 'S tier', A: 'A tier', B: 'B tier', C: 'C tier' };
 
-  /* --- Pataisos ------------------------------------------------------------ */
+  /* --- Patches -------------------------------------------------------------- */
 
   var PATCHES = [
     {
       version: '26.18', date: '2026-09-09', current: true,
-      title: 'Pasaulio čempionato pusiausvyra',
-      summary: 'Paskutinė balansavimo pataisa prieš pasaulio čempionatą: nusitaikyta į miško tempą ir palaikymo inžinierius.',
+      title: 'The Worlds balance patch',
+      summary: 'The last balance pass before the World Championship: jungle tempo and the support engine room take the hit.',
       changes: [
-        { type: 'nerf',   champ: 'Briar',       note: 'Q atšalimas 11/10/9/8/7 s → 13/12/11/10/9 s' },
-        { type: 'nerf',   champ: 'Milio',       note: 'W skydo dydis −12 % ankstyvuose lygiuose' },
-        { type: 'buff',   champ: 'Gnar',        note: 'Bazinė ginklų žala 60 → 63' },
-        { type: 'buff',   champ: 'Azir',        note: 'Kareivių žala pagal AP 55 % → 60 %' },
-        { type: 'buff',   champ: 'Kalista',     note: 'Pasyvaus šuolio atstumas +15 vnt.' },
-        { type: 'adjust', champ: 'K\'Sante',    note: 'Mažiau R žalos, daugiau tvarumo visai komandai' },
-        { type: 'nerf',   champ: 'Smolder',     note: 'Pasyvo kaupimo greitis −8 %' },
-        { type: 'system', champ: 'Miško augalai', note: 'Pilies augalai atsiranda 30 s vėliau' },
-        { type: 'system', champ: 'Sudaužytas šarvas', note: 'Kaina 2900 → 3000 aukso' }
+        { type: 'nerf',   champ: 'Briar',        note: 'Q cooldown 11/10/9/8/7s → 13/12/11/10/9s' },
+        { type: 'nerf',   champ: 'Milio',        note: 'W shield strength −12% at early ranks' },
+        { type: 'buff',   champ: 'Gnar',         note: 'Base attack damage 60 → 63' },
+        { type: 'buff',   champ: 'Azir',         note: 'Soldier AP ratio 55% → 60%' },
+        { type: 'buff',   champ: 'Kalista',      note: 'Passive hop range +15 units' },
+        { type: 'adjust', champ: 'K\'Sante',     note: 'Less R damage, more team-wide durability' },
+        { type: 'nerf',   champ: 'Smolder',      note: 'Passive stack rate −8%' },
+        { type: 'system', champ: 'Jungle plants', note: 'Blast cones spawn 30s later' },
+        { type: 'system', champ: 'Sundered Sky', note: 'Cost 2900 → 3000 gold' }
       ]
     },
     {
       version: '26.17', date: '2026-08-26',
-      title: 'Šaulių eilė atgauna orą',
-      summary: 'Sumažintas mago palaikymų dominavimas apatinėje eilėje, sustiprinti klasikiniai šauliai.',
+      title: 'Marksmen get room to breathe',
+      summary: 'Mage supports lose their grip on the bot lane; classic marksmen are handed their scaling back.',
       changes: [
-        { type: 'buff',   champ: 'Jinx',        note: 'Pasyvo greičio priedas trunka 6 s' },
-        { type: 'buff',   champ: 'Sivir',       note: 'W atšokimų žala 60 % → 70 %' },
-        { type: 'nerf',   champ: 'Brand',       note: 'Palaikymo pozicijoje aukso pajamos −5 %' },
-        { type: 'nerf',   champ: 'Hwei',        note: 'QE pralaidumo žala 70 → 60 baziniu lygiu' },
-        { type: 'buff',   champ: 'Sejuani',     note: 'Bazinis atsparumas 32 → 35' },
-        { type: 'adjust', champ: 'Aurora',      note: 'Perkelta dalis žalos iš W į R' },
-        { type: 'system', champ: 'Mirtingumo dalgis', note: 'Naujas legendinis daiktas šauliams' }
+        { type: 'buff',   champ: 'Jinx',         note: 'Passive move-speed bonus lasts 6s' },
+        { type: 'buff',   champ: 'Sivir',        note: 'W bounce damage 60% → 70%' },
+        { type: 'nerf',   champ: 'Brand',        note: 'Gold income −5% in the support role' },
+        { type: 'nerf',   champ: 'Hwei',         note: 'QE base damage 70 → 60' },
+        { type: 'buff',   champ: 'Sejuani',      note: 'Base armour 32 → 35' },
+        { type: 'adjust', champ: 'Aurora',       note: 'Damage shifted out of W and into R' },
+        { type: 'system', champ: 'Mortal Reaper', note: 'New legendary item for marksmen' }
       ]
     },
     {
       version: '26.16', date: '2026-08-12',
-      title: 'Viršaus eilės tvarumas',
-      summary: 'Tankų atnaujinimas: peržiūrėta ankstyvos stadijos aukso ekonomika ir bandinių žala.',
+      title: 'Top lane learns durability again',
+      summary: 'A tank pass: early gold economy and minion damage reworked in favour of front-liners.',
       changes: [
-        { type: 'buff',   champ: 'Ornn',        note: 'Pasyvus kalvės atnaujinimas pasiekiamas 11 lygyje' },
-        { type: 'buff',   champ: 'Malphite',    note: 'Q kaina 60 → 50 manos' },
-        { type: 'nerf',   champ: 'Ambessa',     note: 'R atšalimas +10 s visuose lygiuose' },
-        { type: 'nerf',   champ: 'Camille',     note: 'E pagreitis −50 vnt.' },
-        { type: 'buff',   champ: 'Illaoi',      note: 'Sielos kaupimo laikas 45 s → 40 s' },
-        { type: 'adjust', champ: 'Yorick',      note: 'Mažiau spaudimo vienam, daugiau komandinių kovų naudos' }
+        { type: 'buff',   champ: 'Ornn',         note: 'Passive forge upgrade unlocks at level 11' },
+        { type: 'buff',   champ: 'Malphite',     note: 'Q cost 60 → 50 mana' },
+        { type: 'nerf',   champ: 'Ambessa',      note: 'R cooldown +10s at all ranks' },
+        { type: 'nerf',   champ: 'Camille',      note: 'E dash speed −50 units' },
+        { type: 'buff',   champ: 'Illaoi',       note: 'Soul stack timer 45s → 40s' },
+        { type: 'adjust', champ: 'Yorick',       note: 'Less solo pressure, more teamfight payoff' }
       ]
     },
     {
       version: '26.15', date: '2026-07-29',
-      title: 'Vidurio eilės mobilumas',
-      summary: 'Apribotas judrių žudikų roamingas, sustiprinti klasikiniai magai.',
+      title: 'Mid-lane mobility gets clipped',
+      summary: 'Roaming assassins are reined in while control mages are handed their old levers back.',
       changes: [
-        { type: 'nerf',   champ: 'Akali',       note: 'R1 žala 75 → 65 baziniu lygiu' },
-        { type: 'nerf',   champ: 'Naafiri',     note: 'Šunų atnaujinimo laikas 15 s → 18 s' },
-        { type: 'buff',   champ: 'Orianna',     note: 'Rutulio atšaukimo langas +0,25 s' },
-        { type: 'buff',   champ: 'Viktor',      note: 'E spindulio plotis +20 vnt.' },
-        { type: 'buff',   champ: 'Anivia',      note: 'Kiaušinio atšalimas −20 s vėlyvoje stadijoje' },
-        { type: 'system', champ: 'Prakeiktas skeptras', note: 'Perdarytas: dabar teikia atšalimo sumažinimą' }
+        { type: 'nerf',   champ: 'Akali',        note: 'R1 base damage 75 → 65' },
+        { type: 'nerf',   champ: 'Naafiri',      note: 'Packmate respawn 15s → 18s' },
+        { type: 'buff',   champ: 'Orianna',      note: 'Ball recall window +0.25s' },
+        { type: 'buff',   champ: 'Viktor',       note: 'E beam width +20 units' },
+        { type: 'buff',   champ: 'Anivia',       note: 'Egg cooldown −20s in the late game' },
+        { type: 'system', champ: 'Cursed Sceptre', note: 'Reworked: now grants ability haste' }
       ]
     },
     {
       version: '26.14', date: '2026-07-15',
-      title: 'Miško tempo perkalibravimas',
-      summary: 'Sulėtintas ankstyvas miško tempas, kad eilės turėtų daugiau erdvės.',
+      title: 'Jungle tempo recalibration',
+      summary: 'Early jungle tempo slowed down so that lanes get space to play the game themselves.',
       changes: [
-        { type: 'nerf',   champ: 'Nidalee',     note: 'Miško monstrų žala −6 %' },
-        { type: 'nerf',   champ: 'Graves',      note: 'Q žala monstrams −10 %' },
-        { type: 'buff',   champ: 'Amumu',       note: 'W žala per sekundę +4' },
-        { type: 'buff',   champ: 'Rammus',      note: 'Q pagreitis pasiekiamas greičiau' },
-        { type: 'adjust', champ: 'Bel\'Veth',   note: 'Perdirbtas koralo mechanizmas' },
-        { type: 'system', champ: 'Miško patirtis', note: 'Antra stovyklų banga duoda −8 % patirties' }
+        { type: 'nerf',   champ: 'Nidalee',      note: 'Damage to monsters −6%' },
+        { type: 'nerf',   champ: 'Graves',       note: 'Q damage to monsters −10%' },
+        { type: 'buff',   champ: 'Amumu',        note: 'W damage per second +4' },
+        { type: 'buff',   champ: 'Rammus',       note: 'Q reaches max speed sooner' },
+        { type: 'adjust', champ: 'Bel\'Veth',    note: 'Coral mechanic reworked' },
+        { type: 'system', champ: 'Jungle XP',    note: 'Second camp clear grants −8% experience' }
       ]
     },
     {
       version: '26.13', date: '2026-07-01',
-      title: 'Vasaros sezono startas',
-      summary: 'Sezono vidurio atnaujinimas: nauji daiktai, pakeista Baron nauda.',
+      title: 'Summer split opener',
+      summary: 'The mid-season update: new items and a rebuilt Baron buff.',
       changes: [
-        { type: 'system', champ: 'Baron Nashor', note: 'Nauda dabar stiprina bokštų ardymą, ne bazines savybes' },
-        { type: 'buff',   champ: 'Zeri',        note: 'Q žalos priedas nuo kritinio smūgio +5 %' },
-        { type: 'nerf',   champ: 'Rell',        note: 'W ir R atšalimai +8 %' },
-        { type: 'buff',   champ: 'Karthus',     note: 'R žala 200/350/500 → 220/380/540' },
-        { type: 'nerf',   champ: 'Volibear',    note: 'Bazinis gyvybės atsinaujinimas −1,5' }
+        { type: 'system', champ: 'Baron Nashor', note: 'Buff now empowers sieging instead of raw stats' },
+        { type: 'buff',   champ: 'Zeri',         note: 'Q crit damage scaling +5%' },
+        { type: 'nerf',   champ: 'Rell',         note: 'W and R cooldowns +8%' },
+        { type: 'buff',   champ: 'Karthus',      note: 'R damage 200/350/500 → 220/380/540' },
+        { type: 'nerf',   champ: 'Volibear',     note: 'Base health regen −1.5' }
       ]
     }
   ];
 
-  /* --- Emerald+ čempionų statistika (dabartinė pataisa) --------------------- */
-  /* wr = laimėjimų %, pr = pasirinkimo %, br = draudimo %, d = wr pokytis vs 26.17 */
+  /* --- Emerald+ champion statistics (current patch) ------------------------- */
+  /* wr = win %, pr = pick %, br = ban %, d = win-rate change vs 26.17 (pp) */
 
   var RAW = [
     /* TOP */
@@ -183,7 +183,7 @@ window.LoL = (function () {
     ['Renata Glasc', 'Renata', 'SUPPORT', 51.5, 4.8, 3.1, 28840, 0.9]
   ];
 
-  /** Pakopa — pagal laimėjimų ir pasirinkimo derinį (ne pagal vieną skaičių). */
+  /** Tier from the win-rate / pick-rate pair, never from one number alone. */
   function tierOf(wr, pr) {
     var score = (wr - 50) * 2.2 + Math.min(pr, 20) * 0.22;
     if (score >= 5.4) return 'S';
@@ -202,18 +202,109 @@ window.LoL = (function () {
     };
   });
 
-  /** Laimėjimų istorija per 6 pataisas — determinuota pagal čempiono vardą. */
+  /* --- Patch analysis -------------------------------------------------------
+     A written read of the dataset above. The method is the one the community
+     uses — win-rate vs pick-rate quadrants, ban-rate lag, one-trick selection
+     bias, reading a patch arc rather than a single patch — applied to these
+     numbers. The conclusions are therefore about THIS dataset, not a claim
+     about live solo queue.
+     ----------------------------------------------------------------------- */
+
+  var ANALYSIS = {
+    patch: '26.18',
+    kicker: 'Meta read',
+    headline: 'The six-patch shove away from the solo carry',
+    standfirst: 'Read 26.18 on its own and it looks like a quiet pre-Worlds tap. ' +
+      'Read it as the sixth patch in a row pointing the same way and it is the ' +
+      'closing argument: the game no longer pays you for winning your lane alone.',
+
+    takes: [
+      {
+        title: 'This is an arc, not a patch',
+        body: 'Every patch since 26.14 has pulled the same lever. Jungle XP cut, ' +
+          'then assassin mobility clipped, then top-lane tanks handed durability, ' +
+          'then marksmen given their scaling back — and now blast cones spawn 30 ' +
+          'seconds later, which lands on top of the 26.14 camp-XP nerf rather than ' +
+          'beside it. Individually each change is small. Stacked, they have moved ' +
+          'roughly two percentage points of win rate from champions who snowball a ' +
+          'lead into champions who convert a teamfight.',
+        evidence: 'Top six win rates: three tanks, one control mage, one tank support, one late-game ADC. No assassins.'
+      },
+      {
+        title: 'Ban rates are fighting the last patch',
+        body: 'Ambessa is banned in 18.9% of games and wins 48.4% of the ones she ' +
+          'reaches. Akali is banned 15.3% at 48.3%. Those bans are muscle memory ' +
+          'from 26.13, and they are being spent on champions the patch notes ' +
+          'already handled. Meanwhile Amumu — the single highest win rate in the ' +
+          'dataset — is banned 2.4% of the time. The cheapest edge on this patch is ' +
+          'not a pick; it is noticing which bans have stopped earning their slot.',
+        evidence: 'Ambessa: 18.9% ban / 48.4% win. Amumu: 2.4% ban / 53.4% win.'
+      },
+      {
+        title: 'The bot lane split is the sharpest signal',
+        body: 'Sivir is the biggest riser at +2.1pp and sits at 52.3% — on 6.8% ' +
+          'pick rate. Ezreal is the most-picked champion in the game at 21.4% and ' +
+          'loses more than he wins. That gap is not a balance problem, it is a ' +
+          'habit problem: 26.17 rewarded marksmen who commit to a teamfight ' +
+          'position, and the most popular ADC is the one built to avoid ever ' +
+          'committing to one. Kai\'Sa at 19.2% pick and 49.8% is the same story.',
+        evidence: 'Sivir 6.8% pick at 52.3%. Ezreal 21.4% pick at 48.9%. Kai\'Sa 19.2% at 49.8%.'
+      },
+      {
+        title: '26.18 removes the two champions holding the old meta together',
+        body: 'Briar and Milio are not random targets. Briar was the last jungler ' +
+          'who could still convert an early lead on her own, and Milio was the ' +
+          'safety net that let a fragile carry survive the front-to-back fights the ' +
+          'previous five patches created. Nerf both in the same patch and you have ' +
+          'not adjusted two champions — you have removed the escape hatch from the ' +
+          'meta you just spent two months building. Expect the tank cluster to ' +
+          'overshoot before it settles.',
+        evidence: 'Briar −2.6pp and Milio −2.8pp are the two largest drops on the patch.'
+      },
+      {
+        title: 'Worlds will amplify this, not correct it',
+        body: 'Pro teams already prefer front-to-back compositions with a scaling ' +
+          'carry, because coordinated play makes teamfight win conditions more ' +
+          'reliable than solo-queue skirmish ones. Handing them a patch that was ' +
+          'already pushing that direction means the stage version will look more ' +
+          'extreme than the ladder version, not less. The honest caution is the ' +
+          'reverse direction: what wins at Worlds on 26.18 will be worse advice for ' +
+          'your own games than usual, because the patch rewards exactly the ' +
+          'coordination solo queue cannot supply.',
+        evidence: 'Azir +1.7pp and Kalista +1.6pp — two champions that scale hard with coordination — are buffed directly on 26.18.'
+      }
+    ],
+
+    watchlist: [
+      { name: 'Sivir', verdict: 'Buy', note: 'Biggest riser, still only 6.8% picked and 2.9% banned. The gap closes.' },
+      { name: 'Anivia', verdict: 'Careful', note: '53.1% on 3.9% pick rate is mostly one-trick selection bias, not a free win.' },
+      { name: 'Azir', verdict: 'Buy', note: 'Directly buffed on 26.18, already +1.7pp, and Worlds visibility is about to arrive.' },
+      { name: 'Ambessa', verdict: 'Stop banning', note: '18.9% ban rate on a 48.4% champion — that slot is being wasted.' },
+      { name: 'Ezreal', verdict: 'Sell', note: 'The most-picked champion in the game has been below 50% for two patches.' },
+      { name: 'Amumu', verdict: 'Buy now', note: 'Best win rate in the dataset, near-zero ban rate. This will not last.' }
+    ],
+
+    caveats: [
+      'Emerald+ is not pro play. A pick that needs five coordinated players reads worse here than it does on stage.',
+      'Low pick rate inflates win rate. Anivia at 3.9% and Rammus at 3.8% are largely played by people who play only them.',
+      'Ban rates lag the meta by roughly two patches, so ban data describes what players feared recently, not what is strong now.',
+      'Win-rate deltas this size (±2pp) need a full patch cycle to separate real change from noise.',
+      'These are demo numbers shipped with the dashboard, not a live Riot feed — the reasoning is real, the underlying data is illustrative.'
+    ]
+  };
+
+  /** Win-rate history across the six patches — deterministic per champion name. */
   function history(champ) {
     var seed = 0;
     for (var i = 0; i < champ.name.length; i++) seed = (seed * 31 + champ.name.charCodeAt(i)) >>> 0;
     var rnd = U.rng(seed);
     var out = new Array(PATCHES.length);
-    out[0] = champ.wr;                                   /* naujausia pataisa */
+    out[0] = champ.wr;                                   /* most recent patch */
     for (var k = 1; k < PATCHES.length; k++) {
       var drift = k === 1 ? champ.d : (rnd() - 0.5) * 2.2;
       out[k] = Math.round((out[k - 1] - drift) * 10) / 10;
     }
-    return out.reverse();                                /* seniausia → naujausia */
+    return out.reverse();                                /* oldest → newest */
   }
 
   function byRole(role) {
@@ -225,7 +316,11 @@ window.LoL = (function () {
     return r ? r.name : id;
   }
 
-  /** Bendra statistika viršuje. */
+  function byName(name) {
+    return CHAMPIONS.filter(function (c) { return c.name === name; })[0] || null;
+  }
+
+  /** Headline numbers for the top of the view. */
   function summary() {
     var total = U.sum(CHAMPIONS, function (c) { return c.games; });
     var top = CHAMPIONS.slice().sort(function (a, b) { return b.wr - a.wr; })[0];
@@ -241,14 +336,16 @@ window.LoL = (function () {
     TIER_LABEL: TIER_LABEL,
     PATCHES: PATCHES,
     CHAMPIONS: CHAMPIONS,
+    ANALYSIS: ANALYSIS,
     current: PATCHES[0],
     history: history,
     byRole: byRole,
+    byName: byName,
     roleName: roleName,
     summary: summary,
     icon: ICON,
 
-    /* Prijungimo taškas: gražink {patches, champions} tos pačios formos. */
+    /* Hook-up point: return { patches, champions } in the same shape. */
     load: function (promise) {
       return Promise.resolve(promise).then(function (payload) {
         if (payload && payload.champions) CHAMPIONS = payload.champions;

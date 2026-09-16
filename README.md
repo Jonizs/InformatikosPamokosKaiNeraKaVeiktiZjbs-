@@ -1,160 +1,155 @@
-# Skydas — Claude & League of Legends kontrolės skydas
+# Dashboard — Claude usage & League of Legends meta
 
-Tamsaus režimo analitikos skydas su šešiais skirtukais: keturi skirti Claude
-paskyros naudojimo statistikai, vienas — League of Legends metai, vienas —
-nustatymams.
+A dark-mode analytics dashboard with six tabs: four for Claude account usage,
+one for the League of Legends meta, one for settings.
 
-Viskas parašyta grynu HTML / CSS / JavaScript. **Jokių bibliotekų, jokių
-build'o žingsnių, jokių CDN** — visi grafikai yra savos SVG komponentės
-(`assets/js/charts.js`), todėl svetainė veikia ir visiškai neprisijungus.
+Plain HTML, CSS and JavaScript. **No libraries, no build step, no CDN** — every
+chart is a hand-rolled SVG component (`assets/js/charts.js`), so the site works
+fully offline.
+
+**Live:** https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/
 
 ---
 
-## Paleidimas
+## Running it
 
-Užtenka atidaryti `index.html` naršyklėje.
+Open `index.html` in a browser.
 
-Jei nori vietinio serverio (rekomenduojama — taip veikia ir CSV eksportas):
+For a local server (recommended — the CSV export needs it):
 
 ```bash
 python3 -m http.server 8000
-# atidaryk http://localhost:8000
+# open http://localhost:8000
 ```
 
 ---
 
-## Publikavimas per GitHub Pages
+## Publishing to GitHub Pages
 
-Workflow'as (`.github/workflows/pages.yml`) jau paruoštas. Lieka **vienas
-vienkartinis žingsnis, kurį gali padaryti tik repo savininkas**:
+`.github/workflows/pages.yml` is already set up. One-time step, repo owner only:
 
 1. **Settings → Pages**
-2. **Build and deployment → Source** → pasirink **GitHub Actions**
-3. Eik į **Actions → Deploy to GitHub Pages** ir paspausk **Re-run jobs**
-   ties paskutiniu paleidimu (arba **Run workflow**)
+2. **Build and deployment → Source** → **GitHub Actions**
+3. **Actions → Deploy to GitHub Pages → Run workflow**
 
-Pats workflow'as Pages įjungti negali: `GITHUB_TOKEN` neturi admin teisių,
-todėl `enablement: true` grąžina „Resource not accessible by integration".
+After that every push to the branch redeploys automatically.
 
-Įjungus, kiekvienas push'as į šaką svetainę atnaujina automatiškai. Eigą
-matysi **Actions** skirtuke, o nuoroda bus:
+The workflow cannot enable Pages itself: `GITHUB_TOKEN` has no admin rights, so
+`enablement: true` returns "Resource not accessible by integration".
 
-```
-https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/
-```
-
-Deploy'ą galima paleisti ir ranka: **Actions → Deploy to GitHub Pages →
-Run workflow**.
-
-> Repozitorija yra vieša, tad ir svetainė bus vieša.
-
-Jei kada prireiktų seno būdo be Actions, veiks ir **Source: Deploy from a
-branch**, pasirinkus šią šaką ir šakninį (`/`) katalogą — visi keliai
-projekte reliatyvūs, tad svetainė veikia ir iš podėlio
-`/<repo-pavadinimas>/`. Failas `.nojekyll` išjungia Jekyll apdorojimą, kad
-šis nieko nepraleistų.
+`.nojekyll` stops Jekyll from skipping files. All paths are relative, so the
+site also works from a `/<repo-name>/` sub-path.
 
 ---
 
-## Skirtukai
+## Tabs
 
-| # | Skirtukas | Kas viduje |
-|---|-----------|------------|
-| 1 | **Apžvalga** | Herojinis žetonų skaičius, KPI plytelės su sparklainais, dienos žetonų kreivė, žetonų sudėtis (podėlis vs įvestis/išvestis), daugiausiai dirbti projektai, modelių pasiskirstymas, aktyvumo kalendorius, karščiausios dienos, sesijų juosta |
-| 2 | **League of Legends** | Pataisų istorija (akordeonas su buff/nerf/adjust ženklais), pataisos poveikio žiedas, Emerald+ didžiausio winrate čempionai, kilėjai ir kritėjai, winrate × pickrate sklaida, pilna rikiuojama čempionų lentelė su paieška, meta judėjimas per 6 pataisas |
-| 3 | **Projektai** | Dėmesio pasiskirstymas per laiką (sukrauti stulpeliai), rikiuojama projektų lentelė, kalbų pasiskirstymas, vieno projekto kreivė |
-| 4 | **Modeliai ir kaštai** | Kaštai per laiką pagal modelį, kaupiamieji kaštai, modelių palyginimo lentelė, naudojami tarifai, žetonų tipai pagal modelį |
-| 5 | **Aktyvumas** | Savaitės diena × valanda šilumos matrica, savaitės dienų suvestinė, paros kreivė, aktyvumo kalendorius, serijos ir pertraukos, dienos intensyvumo sklaida |
-| 6 | **Nustatymai** | Tema, numatytasis laikotarpis, pradinis skirtukas, kainų tarifai, duomenų šaltinių instrukcijos, CSV/JSON eksportas |
+| # | Tab | What's in it |
+|---|-----|--------------|
+| 1 | **Overview** | Hero token figure, KPI tiles with sparklines, daily token curve, token composition (cache vs input/output), most-worked projects, model split, activity calendar, hottest days, session feed |
+| 2 | **League of Legends** | **Written patch analysis** (five numbered takes, watchlist, caveats), patch history accordion, patch-impact donut, Emerald+ win-rate leaders, risers and fallers, win rate × pick rate scatter, sortable searchable champion table, meta movement across six patches |
+| 3 | **Projects** | Attention split over time (stacked bars), sortable project table, language split, single-project curve |
+| 4 | **Models & cost** | Cost over time by model, cumulative cost, model comparison table, editable rates, token types by model |
+| 5 | **Activity** | Weekday × hour heatmap, weekday rollup, hour-of-day curve, activity calendar, streaks and gaps, daily intensity scatter |
+| 6 | **Settings** | Theme, default range, starting tab, pricing rates, data-source instructions, CSV/JSON export |
 
 ---
 
-## Duomenys
+## Data
 
-> **Svarbu: šiuo metu rodomi demo duomenys.**
+> **Important: this ships with demo data.**
 >
-> Claude statistika generuojama vietoje determinuotu sėkliniu generatoriumi
-> (`assets/js/data/claude-data.js`), o LoL pataisos ir winrate skaičiai yra
-> ranka sudėtas pavyzdinis rinkinys (`assets/js/data/lol-data.js`).
-> Jie **nėra** gyva Riot ar Claude statistika. Taip padaryta tam, kad skydas
-> veiktų be jokio serverio ir be API raktų.
+> Claude statistics are generated locally by a deterministic seeded generator
+> (`assets/js/data/claude-data.js`). The League patches and win rates are a
+> hand-assembled illustrative set (`assets/js/data/lol-data.js`). Neither is a
+> live Riot or Claude feed. This is deliberate: the dashboard runs with no
+> server and no API keys.
 
-Kainos taip pat yra **prielaida**: skydas nežino tavo tikrų įkainių, todėl
-skaičiuoja pagal „Nustatymuose" įrašytus tarifus. Pakeitus juos, visi kaštai
-persiskaičiuoja.
+Pricing is also an **assumption** — the dashboard has no access to your real
+rates, so it computes costs from the values in Settings. Change them and every
+figure recomputes.
 
-### Realių duomenų prijungimas
+### Wiring up real data
 
-Visi rodiniai skaito tik `Data` ir `LoL` API, todėl pakanka pakeisti po vieną
-funkciją — nė vienos kortelės perrašinėti nereikia.
+Every view reads the `Data` and `LoL` APIs and nothing else, so one function per
+source is the whole integration:
 
 ```js
-// Claude statistika — masyvas, viena eilutė per dieną
-Data.load(fetch('/mano-statistika.json').then(r => r.json()))
+// One row per day
+Data.load(fetch('/my-usage.json').then(r => r.json()))
     .then(() => App.rerender());
 
-// LoL — { patches: [...], champions: [...] }
+// { patches: [...], champions: [...] }
 LoL.load(fetch('/lol.json').then(r => r.json()))
    .then(() => App.rerender());
 ```
 
-Tikslios laukų struktūros parodytos „Nustatymų" skirtuke.
+The exact field shapes are printed in the Settings tab.
 
-Čempionų paveikslėliai imami iš Riot Data Dragon CDN. Jei jie neužsikrauna
-(nėra interneto, blokuoja tinklas), lieka inicialų plytelės — svetainė
-nesulūžta.
+Champion portraits come from Riot's Data Dragon CDN. If they fail to load (no
+network, blocked), initial tiles are shown instead — nothing breaks.
+
+### About the patch analysis
+
+The League tab includes a written read of the current patch. The *method* is the
+one the community uses — win rate versus pick rate, ban-rate lag, one-trick
+selection bias, and reading a patch arc rather than a single patch — applied to
+the numbers in this repository. Because those numbers are the demo set, the
+conclusions describe **this dataset**, not live solo queue. The card says so,
+and a "What would make this wrong" panel lists the limits explicitly.
 
 ---
 
-## Kodo struktūra
+## Code layout
 
 ```
-index.html                     karkasas: šoninė juosta, viršutinė juosta, turinio vieta
-assets/css/app.css             dizaino sistema: žetonai, komponentės, adaptyvumas
-assets/js/util.js              formatavimas (lt-LT), datos, sėklinis RNG, localStorage
-assets/js/charts.js            SVG grafikų biblioteka + patarimų burbulai + lentelių dvyniai
-assets/js/data/claude-data.js  Claude duomenų sluoksnis ir užklausos
-assets/js/data/lol-data.js     LoL pataisos ir čempionų statistika
-assets/js/views/shared.js      bendri rodinių blokai (plytelės, antraštės, filtrai)
-assets/js/views/*.js           po vieną failą kiekvienam skirtukui
-assets/js/app.js               maršrutizavimas (#/hash), būsena, tema
-.github/workflows/pages.yml    automatinis publikavimas į GitHub Pages
-.nojekyll                      išjungia Jekyll apdorojimą Pages'e
+index.html                     shell: sidebar, topbar, content slot
+assets/css/app.css             design system: tokens, components, responsive rules
+assets/js/util.js              formatting (en-US), dates, seeded RNG, localStorage
+assets/js/charts.js            SVG chart library + tooltips + table twins
+assets/js/data/claude-data.js  Claude data layer and queries
+assets/js/data/lol-data.js     League patches, champion stats, patch analysis
+assets/js/views/shared.js      shared view blocks (tiles, headings, filters)
+assets/js/views/*.js           one file per tab
+assets/js/app.js               routing (#/hash), state, theme
+.github/workflows/pages.yml    automatic GitHub Pages deployment
+.nojekyll                      disables Jekyll processing on Pages
 ```
 
-Naujas skirtukas pridedamas taip: sukuriamas `Views.vardas = { title, sub,
-needsRange, render(state) }`, failas įtraukiamas į `index.html`, o `vardas`
-įrašomas į `ORDER` masyvą `app.js` faile.
+To add a tab: create `Views.name = { title, sub, needsRange, render(state) }`,
+add the file to `index.html`, and add `name` to the `ORDER` array in `app.js`.
 
 ---
 
-## Dizaino taisyklės
+## Chart rules
 
-Grafikai laikosi kelių griežtų taisyklių, kad niekada nemeluotų:
+The charts follow a few strict rules so they never mislead:
 
-- **Viena y ašis.** Jokių dvigubų skalių — jos išgalvoja koreliaciją.
-- **Stulpeliai auga nuo nulio.** Kur svarbus nuokrypis (pvz., winrate prieš
-  50 %), naudojama diverguojanti forma su tikra nuline baze, o ne nukirpta ašis.
-  Priartinta ašis leidžiama tik tendencijų linijoms ir tai pasakoma antraštėje.
-- **Spalva seka objektą, ne reitingą.** Filtruojant likusieji nepersidažo.
-- **Daugiausiai 8 kategorinės spalvos**, uodega suvyniojama į pilką „Kita";
-  devinta spalva niekada negeneruojama.
-- **Būsenos spalva niekada viena.** Buff / nerf / adjust visada turi ir ženklą.
-- **Kiekvienas grafikas turi lentelės dvynį** — mygtukas „Lentelė" kortelės
-  kampe parodo tas pačias reikšmes tekstu.
-- **Plonos žymos:** 2 px linijos, ≤24 px stulpeliai, 4 px apvalintas duomenų
-  galas, 2 px paviršiaus tarpas tarp segmentų (ne apvadas), plaukų linijos
-  tinklelis.
+- **One y axis.** Never a dual scale — it invents correlations.
+- **Bars grow from zero.** Where the deviation is the point (win rate against
+  50%), a diverging form with a real zero baseline is used instead of a
+  truncated axis. A zoomed axis is allowed only on trend lines, and the caption
+  says so.
+- **Colour follows the entity, not its rank.** Filtering never repaints the
+  survivors.
+- **At most 8 categorical colours**, with the tail folded into a grey "Other";
+  a ninth hue is never generated.
+- **Status colour never travels alone.** Buff / nerf / adjust always carry a
+  glyph as well.
+- **Every chart has a table twin** — the "Table" button in the card corner
+  shows the same values as text.
+- **Thin marks:** 2px lines, ≤24px bars, 4px rounded data-ends, a 2px surface
+  gap between segments (never a border), hairline gridlines.
 
-Paletė patikrinta spalvų aklumo (CVD) ir kontrasto testais tamsiam paviršiui
-`#16161a` ir šviesiam `#fcfcfb`.
+The palette was validated for colour-blind separation and contrast against both
+the dark surface `#16161a` and the light surface `#fcfcfb`.
 
 ---
 
-## Klaviatūra ir prieinamumas
+## Keyboard and accessibility
 
-- `1`–`6` — greitas šuolis tarp skirtukų
-- `Esc` — uždaro meniu ir patarimų burbulą
-- Praleidimo nuoroda į turinį, `aria-current`, `aria-sort`, `role="switch"`
-- Gerbiamas `prefers-reduced-motion`
-- Veikia be pelės: kiekviena reikšmė pasiekiama ir per lentelės rodinį
+- `1`–`6` — jump between tabs
+- `Esc` — close the menu and any tooltip
+- Skip link, `aria-current`, `aria-sort`, `role="switch"`
+- Respects `prefers-reduced-motion`
+- Works without a pointer: every value is also reachable through a table view

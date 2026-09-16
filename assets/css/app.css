@@ -1,41 +1,42 @@
 /* ==========================================================================
-   Kontrolės skydas — dizaino sistema
-   Spalvų paletė patikrinta CVD / kontrasto testais tamsiam paviršiui #16161a.
+   Dashboard — design system
+   Palette validated for CVD separation and contrast against the dark
+   surface #16161a and the light surface #fcfcfb.
    ========================================================================== */
 
-/* --- 1. Žetonai (tokens) -------------------------------------------------- */
+/* --- 1. Tokens ------------------------------------------------------------ */
 
 :root {
   color-scheme: dark;
 
-  /* Paviršiai */
+  /* Surfaces */
   --plane:       #0d0d10;
   --surface-1:   #16161a;
   --surface-2:   #1d1d22;
   --surface-3:   #24242b;
 
-  /* Rašalas */
+  /* Ink */
   --text-primary:   #ffffff;
   --text-secondary: #c4c4cd;
   --text-muted:     #8a8a95;
 
-  /* Linijos */
+  /* Lines */
   --grid:     #26262c;
   --axis:     #34343c;
   --border:   rgba(255, 255, 255, 0.09);
   --border-strong: rgba(255, 255, 255, 0.16);
 
-  /* Kategorinė paletė — fiksuota tvarka, niekada neciklinama */
-  --series-1: #3987e5;  /* mėlyna   */
-  --series-2: #d95926;  /* oranžinė */
-  --series-3: #199e70;  /* akva     */
-  --series-4: #c98500;  /* geltona  */
-  --series-5: #d55181;  /* magenta  */
-  --series-6: #008300;  /* žalia    */
-  --series-7: #9085e9;  /* violetinė*/
-  --series-8: #e66767;  /* raudona  */
+  /* Categorical palette — fixed order, never cycled */
+  --series-1: #3987e5;  /* blue    */
+  --series-2: #d95926;  /* orange  */
+  --series-3: #199e70;  /* aqua    */
+  --series-4: #c98500;  /* yellow  */
+  --series-5: #d55181;  /* magenta */
+  --series-6: #008300;  /* green   */
+  --series-7: #9085e9;  /* violet  */
+  --series-8: #e66767;  /* red     */
 
-  /* Nuosekli (sequential) mėlyna rampa */
+  /* Sequential blue ramp */
   --seq-0: #1b1b21;
   --seq-1: #16314f;
   --seq-2: #184f95;
@@ -44,14 +45,14 @@
   --seq-5: #6da7ec;
   --seq-6: #9ec5f4;
 
-  /* Būsenos — rezervuotos, niekada nenaudojamos kaip serijos spalva */
+  /* Status — reserved, never reused as a series colour */
   --good:     #0ca30c;
   --warning:  #fab219;
   --serious:  #ec835a;
   --critical: #d03b3b;
   --good-ink: #2fbf2f;
 
-  /* Formos */
+  /* Shape */
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
@@ -103,7 +104,7 @@
   --shadow-2: 0 8px 24px -10px rgba(11,11,11,.18);
 }
 
-/* --- 2. Bazė -------------------------------------------------------------- */
+/* --- 2. Base -------------------------------------------------------------- */
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -147,7 +148,7 @@ a { color: inherit; text-decoration: none; }
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
-/* --- 3. Karkasas ---------------------------------------------------------- */
+/* --- 3. Shell ------------------------------------------------------------- */
 
 .shell { display: flex; min-height: 100vh; }
 
@@ -276,7 +277,7 @@ a { color: inherit; text-decoration: none; }
   border-top: 1px solid var(--border);
 }
 
-/* --- 4. Valdikliai -------------------------------------------------------- */
+/* --- 4. Controls ---------------------------------------------------------- */
 
 .icon-btn {
   display: grid; place-items: center;
@@ -349,12 +350,12 @@ a { color: inherit; text-decoration: none; }
 .search svg { position: absolute; left: 9px; width: 14px; height: 14px; color: var(--text-muted); pointer-events: none; }
 .search .input { padding-left: 29px; min-width: 190px; }
 
-/* --- 5. Tinklelis ir kortelės --------------------------------------------- */
+/* --- 5. Grid and cards ---------------------------------------------------- */
 
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .grid + .grid { margin-top: 14px; }
-/* Tinklelio elementams būtinas min-width: 0 — kitaip plati lentelė
-   išstumia visą puslapį vietoj to, kad slinktų savo kortelėje. */
+/* Grid items need min-width: 0 — otherwise a wide table pushes the whole
+   page sideways instead of scrolling inside its own card. */
 .grid > [class^="col-"] { min-width: 0; }
 .col-3  { grid-column: span 3; }
 .col-4  { grid-column: span 4; }
@@ -401,7 +402,7 @@ a { color: inherit; text-decoration: none; }
 .section-head h2 { font-size: 14.5px; font-weight: 620; letter-spacing: -.01em; }
 .section-head p { font-size: 12px; color: var(--text-muted); }
 
-/* --- 6. Statistikos plytelės ---------------------------------------------- */
+/* --- 6. Stat tiles -------------------------------------------------------- */
 
 .hero {
   display: flex; align-items: flex-end; gap: 22px; flex-wrap: wrap;
@@ -425,7 +426,7 @@ a { color: inherit; text-decoration: none; }
 }
 .tile__value {
   font-size: 26px; font-weight: 620; letter-spacing: -.02em; line-height: 1.1;
-  white-space: nowrap;                    /* reikšmė niekada nelūžta per dvi eilutes */
+  white-space: nowrap;                    /* the value never wraps onto two lines */
 }
 .tile__value small { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
 .tile__spark { width: 76px; height: 26px; flex: 0 0 auto; }
@@ -438,7 +439,7 @@ a { color: inherit; text-decoration: none; }
 .delta--flat { color: var(--text-muted); }
 .delta svg { width: 11px; height: 11px; }
 
-/* --- 7. Grafikai ---------------------------------------------------------- */
+/* --- 7. Charts ------------------------------------------------------------ */
 
 .chart { width: 100%; display: block; overflow: visible; }
 .chart text { font-family: var(--font); }
@@ -482,7 +483,7 @@ a { color: inherit; text-decoration: none; }
 .tooltip__val { font-weight: 640; font-variant-numeric: tabular-nums; }
 .tooltip__foot { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px; }
 
-/* --- 8. Lentelės ---------------------------------------------------------- */
+/* --- 8. Tables ------------------------------------------------------------ */
 
 .table-wrap { overflow-x: auto; max-width: 100%; }
 table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -517,7 +518,7 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
 .bar-cell__track { flex: 1; height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .bar-cell__fill { height: 100%; border-radius: 3px; }
 
-/* --- 9. Sąrašai / įvykių juosta ------------------------------------------- */
+/* --- 9. Lists, feeds and editorial ---------------------------------------- */
 
 .list { display: flex; flex-direction: column; }
 .list__row {
@@ -645,7 +646,7 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
   color: var(--text-muted); font-size: 13px;
 }
 
-/* --- 10. Adaptyvumas ------------------------------------------------------ */
+/* --- 10. Responsive ------------------------------------------------------- */
 
 @media (max-width: 1180px) {
   .col-3 { grid-column: span 6; }
@@ -676,7 +677,7 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
   .topbar { flex-wrap: wrap; }
   .topbar__actions { width: 100%; justify-content: flex-start; }
 
-  /* Siaurame ekrane antraštė ir paaiškinimas dedami vienas po kitu */
+  /* On narrow screens the heading and its caption stack */
   .section-head { flex-direction: column; gap: 2px; align-items: flex-start; }
   .card__head { flex-wrap: wrap; }
   .card__tools { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
@@ -691,4 +692,86 @@ th.sortable[aria-sort="descending"]::after { content: " ↓"; color: var(--serie
 @media print {
   .sidebar, .topbar__actions, .card__tools, .foot { display: none !important; }
   .card { break-inside: avoid; border-color: #ccc; }
+}
+
+/* --- 11. Editorial (the patch analysis) ----------------------------------- */
+
+.card--article .card__body { padding: 22px 22px 20px; }
+
+.article__kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--series-1);
+  margin-bottom: 10px;
+}
+.article__kicker-sep { color: var(--text-muted); }
+.article__kicker-patch { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.article__byline {
+  margin-top: 12px;
+  font-size: 11.5px; line-height: 1.55; color: var(--text-muted);
+  max-width: 44em;
+}
+.article__headline {
+  font-size: 23px; font-weight: 660; letter-spacing: -.022em; line-height: 1.22;
+  margin-bottom: 10px;
+  max-width: 28em;
+}
+.article__standfirst {
+  font-size: 14.5px; line-height: 1.6; color: var(--text-secondary);
+  max-width: 44em;
+}
+.article__byline + .take { border-top: 1px solid var(--border); margin-top: 18px; }
+
+.take { padding: 18px 0; border-bottom: 1px solid var(--border); }
+.take:last-child { border-bottom: 0; padding-bottom: 2px; }
+.take__head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+.take__num {
+  display: inline-grid; place-items: center;
+  width: 20px; height: 20px; flex: none;
+  border-radius: 50%;
+  background: var(--surface-3); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.take__title { font-size: 15px; font-weight: 620; letter-spacing: -.012em; line-height: 1.35; }
+.take__body {
+  font-size: 13.5px; line-height: 1.68; color: var(--text-secondary);
+  max-width: 46em; margin-left: 30px;
+}
+.take__evidence {
+  display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
+  margin: 10px 0 0 30px; padding: 9px 12px;
+  border-left: 2px solid var(--series-1);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--surface-2);
+  font-size: 12px; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.take__evidence-label {
+  font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.verdict {
+  flex: none; align-self: flex-start;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.verdict--good { color: var(--good-ink); border-color: color-mix(in srgb, var(--good) 38%, transparent); }
+.verdict--bad  { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 38%, transparent); }
+.verdict--warn { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 38%, transparent); }
+
+.caveats { margin: 0; padding: 0 0 0 18px; }
+.caveats li {
+  font-size: 12.5px; line-height: 1.6; color: var(--text-secondary);
+  padding: 5px 0;
+}
+.caveats li::marker { color: var(--text-muted); }
+
+@media (max-width: 860px) {
+  .article__headline { font-size: 20px; }
+  .take__body, .take__evidence { margin-left: 0; }
 }

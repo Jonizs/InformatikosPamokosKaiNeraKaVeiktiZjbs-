@@ -1,18 +1,18 @@
 /* =============================================================================
-   claude-data.js — Claude paskyros naudojimo duomenų sluoksnis.
+   claude-data.js — the Claude account usage data layer.
 
-   ĮSPĖJIMAS: čia generuojami DEMO duomenys (determinuotas sėklinis
-   generatorius), kad skydas veiktų be jokio serverio. Visa vartotojo sąsaja
-   skaito TIK žemiau aprašytą `Data` API, todėl realų šaltinį prijungsi
-   pakeisdamas vienintelę funkciją `Data.load()` — žr. „Nustatymai" skirtuką.
+   NOTE: this generates DEMO data (a deterministic seeded generator) so the
+   dashboard runs with no server at all. The entire UI reads ONLY the `Data`
+   API below, so wiring up a real source means replacing a single function,
+   `Data.load()` — see the Settings tab.
    ========================================================================== */
 window.Data = (function () {
   'use strict';
 
-  var DAYS = 182;                                  /* ~6 mėnesiai */
+  var DAYS = 182;                                  /* ~6 months */
   var SEED = 20260916;
 
-  /* --- Katalogai ----------------------------------------------------------- */
+  /* --- Catalogues ----------------------------------------------------------- */
 
   var PROJECTS = [
     { id: 'informatikos-pamokos', name: 'informatikos-pamokos', lang: 'HTML/CSS', slot: 0, weight: 0.26, from: 0,   repo: 'Jonizs/InformatikosPamokos' },
@@ -21,21 +21,21 @@ window.Data = (function () {
     { id: 'tvarkarastis',         name: 'tvarkarastis',         lang: 'TypeScript', slot: 3, weight: 0.13, from: 12,  repo: 'Jonizs/tvarkarastis' },
     { id: 'discord-botas',        name: 'discord-botas',        lang: 'JavaScript', slot: 4, weight: 0.10, from: 0,   repo: 'Jonizs/discord-botas' },
     { id: 'algoritmu-uzduotys',   name: 'algoritmu-uzduotys',   lang: 'C++',      slot: 5, weight: 0.08, from: 60,  repo: 'Jonizs/algoritmai' },
-    { id: 'kita',                 name: 'Kita',                 lang: '—',        slot: 6, weight: 0.05, from: 0,   repo: null }
+    { id: 'other',                name: 'Other',                lang: '—',        slot: 6, weight: 0.05, from: 0,   repo: null }
   ];
 
   var MODELS = [
-    { id: 'opus-5',   name: 'Opus 5',   slot: 0, share: [0.18, 0.42] },  /* dalis: pradžia → pabaiga */
+    { id: 'opus-5',   name: 'Opus 5',   slot: 0, share: [0.18, 0.42] },  /* share: start → end */
     { id: 'sonnet-5', name: 'Sonnet 5', slot: 1, share: [0.52, 0.44] },
     { id: 'haiku-45', name: 'Haiku 4.5', slot: 2, share: [0.30, 0.14] }
   ];
 
-  /* Kainos prielaidos ($ už 1 mln. žetonų). Redaguojamos „Nustatymuose". */
+  /* Price assumptions ($ per 1M tokens). Editable in Settings. */
   var DEFAULT_RATES = {
     'opus-5':   { in: 5.00, out: 25.00 },
     'sonnet-5': { in: 3.00, out: 15.00 },
     'haiku-45': { in: 1.00, out: 5.00 },
-    cacheReadFactor: 0.10,                         /* × įvesties kainos */
+    cacheReadFactor: 0.10,                         /* × the input rate */
     cacheWriteFactor: 1.25
   };
 
@@ -45,12 +45,12 @@ window.Data = (function () {
     return Object.assign({}, DEFAULT_RATES, saved);
   }
 
-  /* --- Generavimas --------------------------------------------------------- */
+  /* --- Generation ----------------------------------------------------------- */
 
-  /* Savaitės ritmas: moksleivio grafikas — piktai dirbama vakarais ir savaitgalį. */
-  var WEEKDAY_FACTOR = [0.82, 0.88, 0.95, 0.90, 1.18, 1.32, 1.12];  /* Pr..Sk */
+  /* Weekly rhythm: a student's schedule — the grind lands on evenings and weekends. */
+  var WEEKDAY_FACTOR = [0.82, 0.88, 0.95, 0.90, 1.18, 1.32, 1.12];  /* Mon..Sun */
 
-  /* Paros pasiskirstymas (24 val.) — vėlyvas vakaras dominuoja. */
+  /* Hour-of-day distribution (24h) — late evening dominates. */
   var HOUR_SHAPE = [
     0.020, 0.008, 0.003, 0.001, 0.001, 0.002, 0.006, 0.014,
     0.022, 0.028, 0.030, 0.033, 0.030, 0.034, 0.040, 0.052,
@@ -67,14 +67,14 @@ window.Data = (function () {
       var wd = U.mondayIndex(date);
       var progress = i / (DAYS - 1);
 
-      /* Auganti bazė + du „projektų karštymečio" kupranugario kupros */
+      /* A rising baseline plus two project-crunch humps */
       var trend = 0.55 + 0.85 * progress;
       var bump = 1 + 0.42 * Math.exp(-Math.pow((i - 118) / 13, 2))
                    + 0.30 * Math.exp(-Math.pow((i - 64) / 11, 2));
       var noise = 0.72 + rnd() * 0.62;
       var intensity = trend * bump * noise * WEEKDAY_FACTOR[wd];
 
-      /* Neaktyvios dienos: atostogos, egzaminų savaitė, tiesiog pertrauka */
+      /* Idle days: holidays, exam week, or simply a break */
       var idle = rnd() < (progress < 0.18 ? 0.22 : 0.09);
       var vacation = (i >= 26 && i <= 36) || (i >= 150 && i <= 154);
       if (idle || vacation) intensity *= rnd() < 0.55 ? 0 : 0.18;
@@ -88,7 +88,7 @@ window.Data = (function () {
       var cacheRead = Math.round(inTok * (2.6 + rnd() * 2.2));
       var cacheWrite = Math.round(inTok * (0.42 + rnd() * 0.3));
 
-      /* Modelių dalys slenka per laikotarpį */
+      /* Model shares drift across the period */
       var modelSplit = {};
       var total = 0;
       MODELS.forEach(function (mdl) {
@@ -99,12 +99,12 @@ window.Data = (function () {
       });
       MODELS.forEach(function (mdl) { modelSplit[mdl.id] /= total; });
 
-      /* Projektų pasiskirstymas — tik tie, kurie tą dieną jau egzistuoja */
+      /* Project split — only projects that already exist on that day */
       var live = PROJECTS.filter(function (p) { return i >= p.from; });
       var projSplit = {};
       var pTotal = 0;
       live.forEach(function (p) {
-        /* Kiekvienas projektas turi savo „karštą" atkarpą */
+        /* Each project has its own hot stretch */
         var age = (i - p.from) / Math.max(1, DAYS - p.from);
         var focus = 0.6 + 0.8 * Math.exp(-Math.pow((age - 0.35) / 0.4, 2));
         var w = p.weight * focus * (0.5 + rnd() * 1.3);
@@ -136,7 +136,7 @@ window.Data = (function () {
 
   var days = build();
 
-  /* --- Kaštų skaičiavimas --------------------------------------------------- */
+  /* --- Cost calculation ------------------------------------------------------ */
 
   function dayCost(d, R) {
     var c = 0;
@@ -151,13 +151,13 @@ window.Data = (function () {
     return c;
   }
 
-  /* --- Užklausos ------------------------------------------------------------ */
+  /* --- Queries ---------------------------------------------------------------- */
 
-  /** Paskutinės N dienos (N = 7 / 30 / 90 / 182). */
+  /** The last N days (N = 7 / 30 / 90 / 182). */
   function range(n) {
     return days.slice(Math.max(0, days.length - n));
   }
-  /** Ankstesnis vienodo ilgio langas — palyginimui. */
+  /** The preceding window of the same length — for comparison. */
   function previous(n) {
     var end = Math.max(0, days.length - n);
     return days.slice(Math.max(0, end - n), end);
@@ -191,7 +191,7 @@ window.Data = (function () {
     return ((now - before) / before) * 100;
   }
 
-  /** Suvestinė pagal projektus (rūšiuota mažėjančiai). */
+  /** Per-project rollup (sorted descending). */
   function byProject(slice) {
     var R = rates();
     var acc = {};
@@ -218,7 +218,7 @@ window.Data = (function () {
       .sort(function (a, b) { return b.tokens - a.tokens; });
   }
 
-  /** Dienos eilutė vienam projektui — sukrautiems stulpeliams. */
+  /** Daily series for one project — for the stacked bars. */
   function projectSeries(slice, projectIds) {
     return projectIds.map(function (pid) {
       return slice.map(function (d) { return Math.round(d.tokensTotal * (d.projSplit[pid] || 0)); });
@@ -250,7 +250,7 @@ window.Data = (function () {
     return acc.sort(function (a, b) { return b.tokens - a.tokens; });
   }
 
-  /** Savaitės diena × valanda — pranešimų skaičius. */
+  /** Weekday × hour — message counts. */
   function hourMatrix(slice) {
     var m = [];
     for (var i = 0; i < 7; i++) m.push(new Array(24).fill(0));
@@ -264,7 +264,7 @@ window.Data = (function () {
     return m.map(function (row) { return row.map(function (v) { return Math.round(v); }); });
   }
 
-  /** Ilgiausia ir dabartinė aktyvių dienų serija. */
+  /** The longest and current streak of active days. */
   function streaks(slice) {
     var cur = 0, best = 0, running = 0;
     slice.forEach(function (d) {
@@ -277,16 +277,16 @@ window.Data = (function () {
     return { current: cur, best: best };
   }
 
-  /* --- Paskutinės sesijos (įvykių juosta) ---------------------------------- */
+  /* --- Recent sessions (the activity feed) ---------------------------------- */
 
   var SESSION_TITLES = {
-    'informatikos-pamokos': ['Pamokos lentelės stilius', 'Formos validavimas', 'Flexbox išdėstymas', 'Kontrastų taisymas', 'Semantinis HTML'],
-    'skydas-dashboard':     ['Grafikų komponentė', 'Tamsaus režimo žetonai', 'Maršrutizavimas per hash', 'Lentelės rikiavimas', 'Patarimų burbulai'],
-    'lol-stats-api':        ['Riot API ribotuvas', 'Pataisų cache sluoksnis', 'Winrate agregavimas', 'Pytest aprėptis', 'Duomenų modelis'],
-    'tvarkarastis':         ['Savaitės rodinys', 'ICS eksportas', 'Pranešimų logika', 'Zod schemos', 'Laiko juostos'],
-    'discord-botas':        ['Slash komandos', 'Rolių valdymas', 'Klaidų žurnalas', 'Deploy į Railway'],
-    'algoritmu-uzduotys':   ['Dinaminis programavimas', 'Grafų apėjimas', 'Rikiavimo lyginimas', 'Atminties optimizavimas'],
-    'kita':                 ['Git konfliktai', 'Shell skriptai', 'Regex derinimas']
+    'informatikos-pamokos': ['Lesson table styling', 'Form validation', 'Flexbox layout', 'Contrast fixes', 'Semantic HTML'],
+    'skydas-dashboard':     ['Chart component', 'Dark-mode tokens', 'Hash routing', 'Table sorting', 'Tooltip layer'],
+    'lol-stats-api':        ['Riot API rate limiter', 'Patch cache layer', 'Win-rate aggregation', 'Pytest coverage', 'Data model'],
+    'tvarkarastis':         ['Week view', 'ICS export', 'Notification logic', 'Zod schemas', 'Time zones'],
+    'discord-botas':        ['Slash commands', 'Role management', 'Error logging', 'Deploy to Railway'],
+    'algoritmu-uzduotys':   ['Dynamic programming', 'Graph traversal', 'Sorting comparison', 'Memory optimisation'],
+    'other':                ['Git conflicts', 'Shell scripts', 'Regex debugging']
   };
 
   function recentSessions(limit) {
@@ -299,7 +299,7 @@ window.Data = (function () {
       var count = Math.min(d.sessions, 2);
       for (var k = 0; k < count && out.length < (limit || 12); k++) {
         var pid = ids[k % ids.length];
-        var titles = SESSION_TITLES[pid] || ['Sesija'];
+        var titles = SESSION_TITLES[pid] || ['Session'];
         var share = d.projSplit[pid];
         out.push({
           date: d.date,
@@ -316,7 +316,7 @@ window.Data = (function () {
     return out;
   }
 
-  /* --- Vieša sąsaja --------------------------------------------------------- */
+  /* --- Public API ------------------------------------------------------------- */
 
   return {
     PROJECTS: PROJECTS,
@@ -336,8 +336,8 @@ window.Data = (function () {
     recentSessions: recentSessions,
     dayCost: function (d) { return dayCost(d, rates()); },
 
-    /* Prijungimo taškas realiems duomenims: gražink tokį pat `days` masyvą.
-       Pvz.: Data.load(fetch(url).then(r => r.json())) — žr. „Nustatymai". */
+    /* Hook-up point for real data: return the same shape of `days` array.
+       e.g. Data.load(fetch(url).then(r => r.json())) — see Settings. */
     load: function (promise) {
       return Promise.resolve(promise).then(function (rows) {
         if (Array.isArray(rows) && rows.length) { days = rows; }

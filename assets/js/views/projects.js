@@ -1,7 +1,7 @@
 /* =============================================================================
-   views/projektai.js — 3 skirtukas: projektų gilinimasis
+   views/projects.js — tab 3: a deeper look at projects
    ========================================================================== */
-Views.projektai = (function () {
+Views.projects = (function () {
   'use strict';
 
   var el = U.el;
@@ -18,7 +18,7 @@ Views.projektai = (function () {
     var totalTokens = U.sum(projects, function (p) { return p.tokens; }) || 1;
     var frag = document.createDocumentFragment();
 
-    /* --- Plytelės ---------------------------------------------------------- */
+    /* --- Tiles ---------------------------------------------------------------- */
 
     var leader = projects[0] || { name: '—', tokens: 0, cost: 0 };
     var lines = U.sum(slice, function (d) { return d.linesAdded + d.linesRemoved; });
@@ -26,30 +26,30 @@ Views.projektai = (function () {
 
     frag.appendChild(VH.grid([
       VH.col(3, [VH.tile({
-        label: 'Aktyvūs projektai', value: U.num(projects.length),
-        foot: 'turėję bent vieną sesiją', color: U.token('--series-1')
+        label: 'Active projects', value: U.num(projects.length),
+        foot: 'with at least one session', color: U.token('--series-1')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Pirmaujantis projektas', value: U.dec((leader.tokens / totalTokens) * 100, 0), unit: ' %',
+        label: 'Leading project', value: U.dec((leader.tokens / totalTokens) * 100, 0), unit: '%',
         foot: leader.name, color: U.token('--series-2')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Pakeistos eilutės', value: U.compact(lines),
+        label: 'Lines changed', value: U.compact(lines),
         delta: Data.pctChange(lines, linesBefore),
-        foot: 'pridėta ir pašalinta',
+        foot: 'added and removed',
         spark: VH.spark(slice, function (d) { return d.linesAdded + d.linesRemoved; }),
         color: U.token('--series-3')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Kaštai · pirmaujantis', value: U.money(leader.cost),
-        foot: U.dec((leader.cost / (U.sum(projects, function (p) { return p.cost; }) || 1)) * 100, 0) + ' % visų kaštų',
+        label: 'Cost · leader', value: U.money(leader.cost),
+        foot: U.dec((leader.cost / (U.sum(projects, function (p) { return p.cost; }) || 1)) * 100, 0) + '% of all cost',
         color: U.token('--series-4')
       })])
     ]));
 
-    /* --- Sukrauti stulpeliai per laiką ------------------------------------- */
+    /* --- Stacked bars over time ------------------------------------------------- */
 
-    frag.appendChild(VH.section('Dėmesio pasiskirstymas', 'kaip projektai dalijosi žetonus per laiką'));
+    frag.appendChild(VH.section('Where attention went', 'how projects shared tokens over time'));
 
     var topIds = projects.slice(0, 5).map(function (p) { return p.id; });
     var buckets = VH.bucketize(slice, 30);
@@ -57,18 +57,18 @@ Views.projektai = (function () {
       var p = projects.filter(function (x) { return x.id === pid; })[0];
       return {
         name: p.name,
-        /* Spalva seka projektą, o ne jo vietą reitinge — filtruojant
-           išlikusieji nepersidažo. */
+        /* Colour follows the project, never its rank — survivors of a filter
+           never get repainted. */
         color: U.seriesColor(p.slot),
         values: buckets.groups.map(function (g) {
           return Math.round(U.sum(g.days, function (d) { return d.tokensTotal * (d.projSplit[pid] || 0); }));
         })
       };
     });
-    /* Uodega suvyniojama į „Kita" — niekada negeneruojama 9-a spalva */
+    /* The tail folds into "Other" — a 9th hue is never generated */
     series.push({
-      name: 'Kiti projektai',
-      /* Uodega — neutrali pilka, o ne devinta sugeneruota spalva */
+      name: 'Other projects',
+      /* The tail gets neutral grey, not a ninth generated hue */
       color: U.token('--text-muted'),
       values: buckets.groups.map(function (g) {
         return Math.round(U.sum(g.days, function (d) {
@@ -81,8 +81,8 @@ Views.projektai = (function () {
 
     frag.appendChild(VH.grid([
       VH.col(12, [Chart.card({
-        title: 'Žetonai pagal projektą',
-        sub: 'grupuojama pagal ' + buckets.unit + ', ' + state.rangeLabel.toLowerCase(),
+        title: 'Tokens by project',
+        sub: 'grouped by ' + buckets.unit + ', ' + state.rangeLabel.toLowerCase(),
         legendBefore: Chart.legend(series),
         render: function (w) {
           return Chart.stackedBars(w, {
@@ -98,7 +98,7 @@ Views.projektai = (function () {
         },
         table: function () {
           return Chart.table(
-            [{ label: 'Laikotarpis' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
+            [{ label: 'Period' }].concat(series.map(function (s) { return { label: s.name, num: true }; })),
             buckets.groups.map(function (g, i) {
               return [g.from === g.to ? U.dayLabel(g.from) : U.dayLabel(g.from) + ' – ' + U.dayLabel(g.to)]
                 .concat(series.map(function (s) { return U.num(s.values[i]); }));
@@ -108,15 +108,15 @@ Views.projektai = (function () {
       })])
     ]));
 
-    /* --- Lentelė + kalbos --------------------------------------------------- */
+    /* --- Table + languages -------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Visi projektai', 'spustelėk stulpelio antraštę, kad perrikiuotum'));
+    frag.appendChild(VH.section('All projects', 'click a column heading to re-sort'));
 
     frag.appendChild(VH.grid([VH.col(12, [projectTable(projects, beforeMap, totalTokens)])]));
 
-    /* --- Vieno projekto kreivė ---------------------------------------------- */
+    /* --- Single-project curve ------------------------------------------------------ */
 
-    frag.appendChild(VH.section('Vieno projekto kreivė', 'pasirink projektą ir matyk jo dienos ritmą'));
+    frag.appendChild(VH.section('Single-project curve', 'pick a project and see its daily rhythm'));
     frag.appendChild(VH.grid([
       VH.col(8, [singleProjectCard(slice, projects, state)]),
       VH.col(4, [languageCard(projects)])
@@ -125,26 +125,26 @@ Views.projektai = (function () {
     return frag;
   }
 
-  /* --- Rikiuojama projektų lentelė ---------------------------------------- */
+  /* --- Sortable project table ------------------------------------------------------ */
 
   function projectTable(projects, beforeMap, totalTokens) {
     var COLS = [
-      { key: 'name', label: 'Projektas' },
-      { key: 'lang', label: 'Kalba' },
-      { key: 'tokens', label: 'Žetonai', num: true },
-      { key: 'sessions', label: 'Sesijos', num: true },
-      { key: 'messages', label: 'Pranešimai', num: true },
-      { key: 'cost', label: 'Kaštai', num: true },
-      { key: 'delta', label: 'Pokytis', num: true },
-      { key: 'lastActive', label: 'Paskutinį kartą' }
+      { key: 'name', label: 'Project' },
+      { key: 'lang', label: 'Language' },
+      { key: 'tokens', label: 'Tokens', num: true },
+      { key: 'sessions', label: 'Sessions', num: true },
+      { key: 'messages', label: 'Messages', num: true },
+      { key: 'cost', label: 'Cost', num: true },
+      { key: 'delta', label: 'Change', num: true },
+      { key: 'lastActive', label: 'Last active' }
     ];
 
     var body = el('div', { class: 'table-wrap' });
     var card = el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Projektų lentelė' }),
-          el('p', { class: 'card__sub', text: projects.length + ' projektai · ' + U.compact(totalTokens) + ' žetonų' })
+          el('h3', { class: 'card__title', text: 'Project table' }),
+          el('p', { class: 'card__sub', text: projects.length + ' projects · ' + U.compact(totalTokens) + ' tokens' })
         ])
       ]),
       el('div', { class: 'card__body' }, [body])
@@ -163,7 +163,7 @@ Views.projektai = (function () {
         var av = k === 'delta' ? (a.delta === null ? -Infinity : a.delta) : a.p[k];
         var bv = k === 'delta' ? (b.delta === null ? -Infinity : b.delta) : b.p[k];
         if (typeof av === 'string' || typeof bv === 'string') {
-          return String(av || '').localeCompare(String(bv || ''), 'lt') * sortState.dir * -1;
+          return String(av || '').localeCompare(String(bv || ''), 'en') * sortState.dir * -1;
         }
         return ((av || 0) - (bv || 0)) * sortState.dir;
       });
@@ -204,7 +204,7 @@ Views.projektai = (function () {
     return card;
   }
 
-  /* --- Kalbų pasiskirstymas ------------------------------------------------ */
+  /* --- Language split ---------------------------------------------------------------- */
 
   function languageCard(projects) {
     var acc = {};
@@ -220,36 +220,36 @@ Views.projektai = (function () {
     var total = U.sum(slices, function (s) { return s.value; }) || 1;
 
     return Chart.card({
-      title: 'Kalbos',
-      sub: 'pagal projektų žetonus',
+      title: 'Languages',
+      sub: 'by project tokens',
       legendAfter: Chart.legend(slices.map(function (s) {
-        return { name: s.name, color: s.color, note: U.dec((s.value / total) * 100, 0) + ' %' };
+        return { name: s.name, color: s.color, note: U.dec((s.value / total) * 100, 0) + '%' };
       })),
       render: function (w) {
         return Chart.donut(w, {
-          size: 186, slices: slices, format: U.compact, valueName: 'Žetonai',
-          centerValue: String(slices.length), centerLabel: 'kalbos'
+          size: 186, slices: slices, format: U.compact, valueName: 'Tokens',
+          centerValue: String(slices.length), centerLabel: 'languages'
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Kalba' }, { label: 'Žetonai', num: true }, { label: 'Dalis', num: true }],
+          [{ label: 'Language' }, { label: 'Tokens', num: true }, { label: 'Share', num: true }],
           slices.map(function (s) {
-            return [s.name, U.num(Math.round(s.value)), U.dec((s.value / total) * 100, 1) + ' %'];
+            return [s.name, U.num(Math.round(s.value)), U.dec((s.value / total) * 100, 1) + '%'];
           })
         );
       }
     });
   }
 
-  /* --- Vieno projekto kreivė ------------------------------------------------ */
+  /* --- Single-project curve ------------------------------------------------------------ */
 
   function singleProjectCard(slice, projects, state) {
     var chosen = state.project && projects.filter(function (p) { return p.id === state.project; })[0]
       ? state.project : (projects[0] || {}).id;
 
     var picker = el('select', {
-      class: 'select', 'aria-label': 'Pasirink projektą',
+      class: 'select', 'aria-label': 'Choose a project',
       onchange: function () { state.project = picker.value; App.rerender(); }
     }, projects.map(function (p) {
       return el('option', { value: p.id, selected: p.id === chosen, text: p.name });
@@ -260,20 +260,20 @@ Views.projektai = (function () {
     var color = U.seriesColor(proj ? proj.slot : 0);
 
     return Chart.card({
-      title: proj ? proj.name : 'Projektas',
-      sub: proj ? (proj.lang + ' · ' + Math.round(proj.sessions) + ' sesijos · ' + U.money(proj.cost)) : '',
+      title: proj ? proj.name : 'Project',
+      sub: proj ? (proj.lang + ' · ' + Math.round(proj.sessions) + ' sessions · ' + U.money(proj.cost)) : '',
       tools: [picker],
       render: function (w) {
         return Chart.lineChart(w, {
           labels: slice.map(function (d) { return U.dayLabel(d.date); }),
           height: 240, area: true, format: U.compact,
-          series: [{ name: 'Žetonai', color: color, values: values }],
+          series: [{ name: 'Tokens', color: color, values: values }],
           tipTitle: function (i) { return U.fullDate(slice[i].date); }
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Data' }, { label: 'Žetonai', num: true }],
+          [{ label: 'Date' }, { label: 'Tokens', num: true }],
           slice.slice().reverse().map(function (d, i) {
             return [U.fullDate(d.date), U.num(values[values.length - 1 - i])];
           })
@@ -283,8 +283,8 @@ Views.projektai = (function () {
   }
 
   return {
-    title: 'Projektai',
-    sub: 'kur nuėjo laikas ir žetonai',
+    title: 'Projects',
+    sub: 'where the time and tokens went',
     needsRange: true,
     render: render
   };

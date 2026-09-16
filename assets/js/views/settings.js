@@ -1,7 +1,7 @@
 /* =============================================================================
-   views/nustatymai.js — 6 skirtukas: nustatymai ir duomenų šaltiniai
+   views/settings.js — tab 6: settings and data sources
    ========================================================================== */
-Views.nustatymai = (function () {
+Views.settings = (function () {
   'use strict';
 
   var el = U.el;
@@ -14,13 +14,13 @@ Views.nustatymai = (function () {
       VH.col(6, [ratesCard()])
     ]));
 
-    frag.appendChild(VH.section('Duomenų šaltiniai', 'kaip pakeisti demo duomenis tikrais'));
+    frag.appendChild(VH.section('Data sources', 'how to swap the demo data for the real thing'));
     frag.appendChild(VH.grid([
       VH.col(6, [claudeSourceCard()]),
       VH.col(6, [lolSourceCard()])
     ]));
 
-    frag.appendChild(VH.section('Duomenys', 'eksportas ir atstatymas'));
+    frag.appendChild(VH.section('Data', 'export and reset'));
     frag.appendChild(VH.grid([
       VH.col(12, [exportCard(state)])
     ]));
@@ -28,47 +28,47 @@ Views.nustatymai = (function () {
     return frag;
   }
 
-  /* --- Išvaizda ------------------------------------------------------------- */
+  /* --- Appearance ----------------------------------------------------------- */
 
   function appearanceCard(state) {
     var body = el('div', { class: 'card__body' });
 
     body.appendChild(setting(
-      'Tamsus režimas',
-      'Numatytasis. Šviesi paletė paruošta ir patikrinta tiems patiems kontrasto reikalavimams.',
+      'Dark mode',
+      'The default. The light palette is built and validated against the same contrast requirements.',
       toggle(document.documentElement.dataset.theme !== 'light', function (on) {
         App.setTheme(on ? 'dark' : 'light');
       })
     ));
 
     body.appendChild(setting(
-      'Numatytasis laikotarpis',
-      'Kokį intervalą rodyti atidarius Claude skirtukus.',
+      'Default time range',
+      'Which range the Claude tabs open on.',
       VH.segmented(App.RANGES.map(function (r) { return { value: r.value, label: r.short }; }),
         U.store.get('defaultRange', 30),
         function (v) { U.store.set('defaultRange', v); state.range = v; App.rerender(); },
-        'Numatytasis laikotarpis')
+        'Default time range')
     ));
 
     body.appendChild(setting(
-      'Pradinis skirtukas',
-      'Kuris rodinys atidaromas paleidus svetainę.',
+      'Starting tab',
+      'Which view opens when the site loads.',
       select(
-        [{ value: 'apzvalga', label: 'Apžvalga' }, { value: 'lol', label: 'League of Legends' },
-         { value: 'projektai', label: 'Projektai' }, { value: 'modeliai', label: 'Modeliai ir kaštai' },
-         { value: 'aktyvumas', label: 'Aktyvumas' }],
-        U.store.get('startView', 'apzvalga'),
+        [{ value: 'overview', label: 'Overview' }, { value: 'lol', label: 'League of Legends' },
+         { value: 'projects', label: 'Projects' }, { value: 'models', label: 'Models & cost' },
+         { value: 'activity', label: 'Activity' }],
+        U.store.get('startView', 'overview'),
         function (v) { U.store.set('startView', v); }
       )
     ));
 
     return el('div', { class: 'card' }, [
-      head('Išvaizda', 'tema, laikotarpis ir pradinis rodinys'),
+      head('Appearance', 'theme, time range and starting view'),
       body
     ]);
   }
 
-  /* --- Tarifai --------------------------------------------------------------- */
+  /* --- Rates ----------------------------------------------------------------- */
 
   function ratesCard() {
     var current = Data.rates();
@@ -84,70 +84,70 @@ Views.nustatymai = (function () {
             el('span', { class: 'swatch', style: { background: U.seriesColor(m.slot) } }),
             document.createTextNode(m.name)
           ]),
-          el('div', { class: 'setting__desc', text: '$ už 1 mln. žetonų — įvestis ir išvestis' })
+          el('div', { class: 'setting__desc', text: '$ per 1M tokens — input and output' })
         ]),
         el('div', { class: 'setting__control', style: { display: 'flex', gap: '6px' } }, [inInput, outInput])
       ]));
     });
 
-    body.appendChild(setting('Podėlio skaitymo daugiklis', 'Kiek kainuoja podėlio skaitymas, palyginti su įvestimi.',
+    body.appendChild(setting('Cache read multiplier', 'What a cache read costs relative to input.',
       numInput(draft.cacheReadFactor, function (v) { draft.cacheReadFactor = v; }, 0.01)));
-    body.appendChild(setting('Podėlio rašymo daugiklis', 'Kiek kainuoja įrašymas į podėlį.',
+    body.appendChild(setting('Cache write multiplier', 'What writing to the cache costs.',
       numInput(draft.cacheWriteFactor, function (v) { draft.cacheWriteFactor = v; }, 0.01)));
 
     body.appendChild(el('div', { style: { display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' } }, [
       el('button', {
-        class: 'btn btn--primary', type: 'button', text: 'Išsaugoti tarifus',
+        class: 'btn btn--primary', type: 'button', text: 'Save rates',
         onclick: function () {
           U.store.set('rates', draft);
-          App.toast('Tarifai išsaugoti — kaštai perskaičiuoti.');
+          App.toast('Rates saved — costs recomputed.');
           App.rerender();
         }
       }),
       el('button', {
-        class: 'btn', type: 'button', text: 'Grąžinti numatytuosius',
-        onclick: function () { U.store.remove('rates'); App.toast('Grąžinti numatytieji tarifai.'); App.rerender(); }
+        class: 'btn', type: 'button', text: 'Restore defaults',
+        onclick: function () { U.store.remove('rates'); App.toast('Default rates restored.'); App.rerender(); }
       })
     ]));
 
     body.appendChild(el('div', { style: { marginTop: '14px' } }, [
-      VH.note('Tai prielaida, ne sąskaita.',
-        'Skydas neturi prieigos prie tavo tikrų įkainių, todėl kaštai skaičiuojami pagal čia įrašytas reikšmes. ' +
-        'Įrašyk savo plano kainas, ir visi skaičiai atsinaujins.')
+      VH.note('This is an assumption, not an invoice.',
+        'The dashboard has no access to your real pricing, so costs are computed from the values ' +
+        'above. Enter your own plan rates and every figure updates.')
     ]));
 
-    return el('div', { class: 'card' }, [head('Kainų tarifai', 'naudojami visiems kaštų skaičiavimams'), body]);
+    return el('div', { class: 'card' }, [head('Pricing rates', 'used for every cost calculation'), body]);
   }
 
-  /* --- Claude šaltinis -------------------------------------------------------- */
+  /* --- Claude source ---------------------------------------------------------- */
 
   function claudeSourceCard() {
     var code = [
       '// assets/js/data/claude-data.js — Data.load()',
       'Data.load(',
-      '  fetch("/mano-statistika.json").then(r => r.json())',
+      '  fetch("/my-usage.json").then(r => r.json())',
       ').then(() => App.rerender());',
       '',
-      '// Laukiamas masyvas, viena eilutė per dieną:',
+      '// Expects an array with one row per day:',
       '// {',
-      '//   date: "2026-09-16",      // ISO data',
-      '//   weekday: 2,              // 0 = pirmadienis',
+      '//   date: "2026-09-16",      // ISO date',
+      '//   weekday: 2,              // 0 = Monday',
       '//   sessions: 4, messages: 58, toolCalls: 121,',
       '//   tokensIn: 120000, tokensOut: 36000,',
       '//   cacheRead: 410000, cacheWrite: 52000,',
       '//   tokensTotal: 618000,',
       '//   linesAdded: 430, linesRemoved: 180,',
       '//   modelSplit: { "opus-5": 0.4, "sonnet-5": 0.45, "haiku-45": 0.15 },',
-      '//   projSplit:  { "skydas-dashboard": 0.7, "kita": 0.3 }',
+      '//   projSplit:  { "skydas-dashboard": 0.7, "other": 0.3 }',
       '// }'
     ].join('\n');
 
     return el('div', { class: 'card' }, [
-      head('Claude statistika', 'kaip prijungti tikrus duomenis'),
+      head('Claude usage', 'wiring up real data'),
       el('div', { class: 'card__body' }, [
         el('p', { class: 'setting__desc', style: { marginBottom: '10px' },
-          text: 'Visi rodiniai skaito tik `Data` API, todėl užtenka pakeisti vieną funkciją — ' +
-                'nė vienos kortelės perrašinėti nereikia.' }),
+          text: 'Every view reads the Data API and nothing else, so one function is the whole ' +
+                'integration — no card needs rewriting.' }),
         codeBlock(code)
       ])
     ]);
@@ -161,39 +161,39 @@ Views.nustatymai = (function () {
       ').then(() => App.rerender());',
       '',
       '// { patches: [...], champions: [...] }',
-      '// champions eilutė:',
+      '// a champions row:',
       '// {',
-      '//   name: "Jinx", key: "Jinx",   // key = Data Dragon vardas',
+      '//   name: "Jinx", key: "Jinx",   // key = Data Dragon name',
       '//   role: "ADC",                 // TOP | JUNGLE | MID | ADC | SUPPORT',
       '//   wr: 52.7, pr: 15.4, br: 8.2,',
-      '//   games: 92530, d: 1.8,        // d = winrate pokytis, p.p.',
+      '//   games: 92530, d: 1.8,        // d = win-rate change, pp',
       '//   tier: "S", icon: "https://…"',
       '// }',
       '',
-      '// Paveikslėliai: Data Dragon ' + LoL.DDRAGON_VERSION,
-      '// Realūs šaltiniai: Riot API (raktas reikalingas) arba',
-      '// viešos meta suvestinės (U.GG, OP.GG, LoLalytics).'
+      '// Portraits: Data Dragon ' + LoL.DDRAGON_VERSION,
+      '// Real sources: the Riot API (key required), or public',
+      '// meta aggregators (U.GG, OP.GG, LoLalytics).'
     ].join('\n');
 
     return el('div', { class: 'card' }, [
-      head('LoL duomenys', 'pataisos ir čempionų statistika'),
+      head('League data', 'patches and champion statistics'),
       el('div', { class: 'card__body' }, [
         el('p', { class: 'setting__desc', style: { marginBottom: '10px' },
-          text: 'Riot neteikia viešo winrate galinio taško — tokią statistiką skaičiuoja trečiosios ' +
-                'šalys arba ją reikia surinkti pačiam iš rungtynių istorijos.' }),
+          text: 'Riot publishes no public win-rate endpoint — that statistic is computed by third ' +
+                'parties, or you collect it yourself from match history.' }),
         codeBlock(code)
       ])
     ]);
   }
 
-  /* --- Eksportas -------------------------------------------------------------- */
+  /* --- Export ----------------------------------------------------------------- */
 
   function exportCard(state) {
     var body = el('div', { class: 'card__body' });
 
     body.appendChild(setting(
-      'Atsisiųsti dabartinį pjūvį',
-      'Išsaugo matomą laikotarpį kaip CSV — galima atidaryti skaičiuoklėje.',
+      'Download the current slice',
+      'Saves the visible time range as CSV, ready for a spreadsheet.',
       el('button', {
         class: 'btn', type: 'button', text: 'CSV',
         onclick: function () { downloadCSV(state); }
@@ -201,44 +201,44 @@ Views.nustatymai = (function () {
     ));
 
     body.appendChild(setting(
-      'Atsisiųsti viską kaip JSON',
-      'Visos dienos su modelių ir projektų pasiskirstymu.',
+      'Download everything as JSON',
+      'All days, including the model and project splits.',
       el('button', {
         class: 'btn', type: 'button', text: 'JSON',
         onclick: function () {
-          download('skydas-duomenys.json', JSON.stringify(Data.all(), null, 2), 'application/json');
+          download('dashboard-data.json', JSON.stringify(Data.all(), null, 2), 'application/json');
         }
       })
     ));
 
     body.appendChild(setting(
-      'Išvalyti išsaugotus nustatymus',
-      'Tema, laikotarpis, tarifai ir pradinis skirtukas grįš į numatytuosius.',
+      'Clear saved settings',
+      'Theme, time range, rates and starting tab all return to their defaults.',
       el('button', {
-        class: 'btn', type: 'button', text: 'Išvalyti',
+        class: 'btn', type: 'button', text: 'Clear',
         onclick: function () {
           ['rates', 'theme', 'defaultRange', 'startView'].forEach(U.store.remove);
-          App.toast('Nustatymai išvalyti.');
+          App.toast('Settings cleared.');
           App.setTheme('dark');
           App.rerender();
         }
       })
     ));
 
-    return el('div', { class: 'card' }, [head('Duomenys', 'eksportas ir atstatymas'), body]);
+    return el('div', { class: 'card' }, [head('Data', 'export and reset'), body]);
   }
 
   function downloadCSV(state) {
     var slice = Data.range(state.range);
-    var headRow = ['data', 'savaites_diena', 'sesijos', 'pranesimai', 'irankiu_iskvietimai',
-                   'ivestis', 'isvestis', 'podelio_skaitymas', 'podelio_rasymas', 'zetonai_viso', 'kastai_usd'];
+    var headRow = ['date', 'weekday', 'sessions', 'messages', 'tool_calls',
+                   'input', 'output', 'cache_read', 'cache_write', 'tokens_total', 'cost_usd'];
     var lines = [headRow.join(',')];
     slice.forEach(function (d) {
       lines.push([d.date, U.WEEKDAYS_LONG[d.weekday], d.sessions, d.messages, d.toolCalls,
                   d.tokensIn, d.tokensOut, d.cacheRead, d.cacheWrite, d.tokensTotal,
                   Data.dayCost(d).toFixed(4)].join(','));
     });
-    download('skydas-' + state.range + 'd.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+    download('dashboard-' + state.range + 'd.csv', lines.join('\n'), 'text/csv;charset=utf-8');
   }
 
   function download(name, content, type) {
@@ -251,7 +251,7 @@ Views.nustatymai = (function () {
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  /* --- Smulkios dalys ---------------------------------------------------------- */
+  /* --- Small parts ------------------------------------------------------------- */
 
   function head(title, sub) {
     return el('div', { class: 'card__head' }, [
@@ -275,7 +275,7 @@ Views.nustatymai = (function () {
   function toggle(on, onChange) {
     var btn = el('button', {
       class: 'switch', type: 'button', role: 'switch',
-      'aria-checked': String(on), 'aria-label': 'Perjungti',
+      'aria-checked': String(on), 'aria-label': 'Toggle',
       onclick: function () {
         on = !on;
         btn.setAttribute('aria-checked', String(on));
@@ -297,7 +297,7 @@ Views.nustatymai = (function () {
     return el('input', {
       class: 'input', type: 'number', min: '0', step: String(step || 0.01),
       value: String(value), style: { width: '92px' },
-      'aria-label': 'Reikšmė',
+      'aria-label': 'Value',
       oninput: function (e) {
         var v = parseFloat(e.target.value);
         if (!isNaN(v) && v >= 0) onChange(v);
@@ -317,8 +317,8 @@ Views.nustatymai = (function () {
   }
 
   return {
-    title: 'Nustatymai',
-    sub: 'tema, tarifai ir duomenų šaltiniai',
+    title: 'Settings',
+    sub: 'theme, rates and data sources',
     needsRange: false,
     render: render
   };

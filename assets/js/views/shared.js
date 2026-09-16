@@ -1,5 +1,5 @@
 /* =============================================================================
-   views/shared.js — rodinių statybiniai blokai (plytelės, antraštės, grupavimas)
+   views/shared.js — building blocks for the views (tiles, headings, bucketing)
    ========================================================================== */
 window.Views = window.Views || {};
 window.VH = (function () {
@@ -7,22 +7,22 @@ window.VH = (function () {
 
   var el = U.el;
 
-  /* --- Laiko grupavimas ---------------------------------------------------- */
+  /* --- Time bucketing -------------------------------------------------------- */
 
   /**
-   * Suskaido dienų pjūvį į <= maxBars grupių (diena / savaitė / mėnuo),
-   * kad stulpelių grafikas liktų įskaitomas ir plačiame diapazone.
+   * Splits a slice of days into <= maxBars groups (day / week / month) so a
+   * bar chart stays readable even across a wide range.
    */
   function bucketize(slice, maxBars) {
     var max = maxBars || 32;
     if (slice.length <= max) {
       return {
-        unit: 'diena',
+        unit: 'day',
         groups: slice.map(function (d) { return { label: U.dayLabel(d.date), days: [d], from: d.date, to: d.date }; })
       };
     }
     var size = Math.ceil(slice.length / max);
-    var unit = size >= 26 ? 'mėnuo' : size >= 6 ? 'savaitė' : 'dienos';
+    var unit = size >= 26 ? 'month' : size >= 6 ? 'week' : 'day group';
     var groups = [];
     for (var i = 0; i < slice.length; i += size) {
       var chunk = slice.slice(i, i + size);
@@ -36,7 +36,7 @@ window.VH = (function () {
     return { unit: unit, groups: groups };
   }
 
-  /** Sparklainui — visada 12 vienodų krepšelių. */
+  /** For sparklines — always 12 equal buckets. */
   function spark(slice, pick) {
     var n = 12;
     var size = Math.max(1, Math.ceil(slice.length / n));
@@ -47,7 +47,7 @@ window.VH = (function () {
     return out.length > 1 ? out : [0, out[0] || 0];
   }
 
-  /* --- Herojinis skaičius (vienas rodinyje) -------------------------------- */
+  /* --- Hero figure (exactly one per view) ------------------------------------ */
 
   function hero(cfg) {
     return el('div', { class: 'card' }, [
@@ -81,7 +81,7 @@ window.VH = (function () {
     return box;
   }
 
-  /* --- Statistikos plytelė ------------------------------------------------- */
+  /* --- Stat tile -------------------------------------------------------------- */
 
   function tile(cfg) {
     return el('div', { class: 'card tile' }, [
@@ -102,7 +102,7 @@ window.VH = (function () {
     ]);
   }
 
-  /* --- Skyriaus antraštė --------------------------------------------------- */
+  /* --- Section heading -------------------------------------------------------- */
 
   function section(title, sub) {
     return el('div', { class: 'section-head' }, [
@@ -111,7 +111,7 @@ window.VH = (function () {
     ]);
   }
 
-  /* --- Pastaba apie duomenų šaltinį ---------------------------------------- */
+  /* --- Data-source note -------------------------------------------------------- */
 
   var INFO_PATH = 'M12 2a10 10 0 100 20 10 10 0 000-20zm0 5.5a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4zM11 12h2v5h-2z';
 
@@ -127,10 +127,10 @@ window.VH = (function () {
     ]);
   }
 
-  /* --- Segmentinis jungiklis ----------------------------------------------- */
+  /* --- Segmented control -------------------------------------------------------- */
 
   function segmented(options, value, onChange, label) {
-    var box = el('div', { class: 'segmented', role: 'group', 'aria-label': label || 'Filtras' });
+    var box = el('div', { class: 'segmented', role: 'group', 'aria-label': label || 'Filter' });
     options.forEach(function (o) {
       box.appendChild(el('button', {
         type: 'button',
@@ -143,7 +143,7 @@ window.VH = (function () {
     return box;
   }
 
-  /* --- Juostelė lentelės langelyje ----------------------------------------- */
+  /* --- Inline bar for a table cell ----------------------------------------------- */
 
   function barCell(value, max, color) {
     return el('div', { class: 'bar-cell' }, [
@@ -156,19 +156,19 @@ window.VH = (function () {
     ]);
   }
 
-  /* --- Čempiono ženkliukas su atsarga be interneto -------------------------- */
+  /* --- Champion badge with an offline fallback ----------------------------------- */
 
   /**
-   * @param sub  papildoma eilutė po vardu; `false` — visai be jos
-   *             (pvz., kai lentelėje jau yra atskiras pozicijos stulpelis)
+   * @param sub  a second line under the name; `false` omits it entirely
+   *             (e.g. when the table already has its own role column)
    */
   function champCell(champ, sub) {
-    /* Pradedama nuo inicialų plytelės; Data Dragon paveikslėlis įstatomas
-       tik tada, kai tikrai užsikrauna — taip niekada nelieka tuščio kvadrato. */
+       /* Start from the initials tile; the Data Dragon portrait is swapped in
+          only once it actually loads, so an empty square is never shown. */
     var fallback = el('div', {
       class: 'champ__fallback', 'aria-hidden': 'true',
       title: champ.name,
-      text: champ.name.replace(/[^A-Za-zĄČĘĖĮŠŲŪŽ ]/g, '').slice(0, 2).toUpperCase()
+      text: champ.name.replace(/[^A-Za-z ]/g, '').slice(0, 2).toUpperCase()
     });
     var img = el('img', {
       class: 'champ__img', src: champ.icon, alt: '', width: 32, height: 32
@@ -187,7 +187,7 @@ window.VH = (function () {
     ]);
   }
 
-  /* --- Tinklelio pagalbinė -------------------------------------------------- */
+  /* --- Grid helpers ----------------------------------------------------------- */
 
   function grid(children) {
     return el('div', { class: 'grid' }, children.filter(Boolean));

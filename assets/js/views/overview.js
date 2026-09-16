@@ -1,7 +1,7 @@
 /* =============================================================================
-   views/apzvalga.js — 1 skirtukas: Claude paskyros naudojimo apžvalga
+   views/overview.js — tab 1: Claude account usage overview
    ========================================================================== */
-Views.apzvalga = (function () {
+Views.overview = (function () {
   'use strict';
 
   var el = U.el;
@@ -13,23 +13,23 @@ Views.apzvalga = (function () {
     var was = Data.totals(prev);
     var frag = document.createDocumentFragment();
 
-    /* --- Herojinis skaičius + plytelės ------------------------------------ */
+    /* --- Hero figure + tiles ------------------------------------------------ */
 
     frag.appendChild(VH.grid([
       VH.col(8, [VH.hero({
-        label: 'Iš viso žetonų · ' + state.rangeLabel.toLowerCase(),
+        label: 'Total tokens · ' + state.rangeLabel.toLowerCase(),
         value: U.compact(now.tokensTotal),
         delta: Data.pctChange(now.tokensTotal, was.tokensTotal),
-        deltaNote: 'lyginant su ankstesniu tokiu pat laikotarpiu',
+        deltaNote: 'vs the preceding period of equal length',
         sparkValues: VH.spark(slice, function (d) { return d.tokensTotal; }),
         sparkColor: U.token('--series-1')
       })]),
       VH.col(4, [VH.tile({
-        label: 'Įvertinti kaštai',
+        label: 'Estimated cost',
         value: U.money(now.cost),
         delta: Data.pctChange(now.cost, was.cost),
         upIsGood: false,
-        foot: 'pagal redaguojamus tarifus',
+        foot: 'using the editable rates',
         spark: VH.spark(slice, function (d) { return Data.dayCost(d); }),
         color: U.token('--series-2')
       })])
@@ -37,63 +37,63 @@ Views.apzvalga = (function () {
 
     frag.appendChild(VH.grid([
       VH.col(3, [VH.tile({
-        label: 'Sesijos', value: U.num(now.sessions),
+        label: 'Sessions', value: U.num(now.sessions),
         delta: Data.pctChange(now.sessions, was.sessions),
-        foot: U.dec(now.sessions / Math.max(1, now.activeDays), 1) + ' per aktyvią dieną',
+        foot: U.dec(now.sessions / Math.max(1, now.activeDays), 1) + ' per active day',
         spark: VH.spark(slice, function (d) { return d.sessions; }),
         color: U.token('--series-1')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Pranešimai', value: U.compact(now.messages),
+        label: 'Messages', value: U.compact(now.messages),
         delta: Data.pctChange(now.messages, was.messages),
-        foot: U.num(Math.round(now.messages / Math.max(1, now.sessions))) + ' vienai sesijai',
+        foot: U.num(Math.round(now.messages / Math.max(1, now.sessions))) + ' per session',
         spark: VH.spark(slice, function (d) { return d.messages; }),
         color: U.token('--series-3')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Įrankių iškvietimai', value: U.compact(now.toolCalls),
+        label: 'Tool calls', value: U.compact(now.toolCalls),
         delta: Data.pctChange(now.toolCalls, was.toolCalls),
-        foot: U.dec(now.toolCalls / Math.max(1, now.messages), 1) + ' vienam pranešimui',
+        foot: U.dec(now.toolCalls / Math.max(1, now.messages), 1) + ' per message',
         spark: VH.spark(slice, function (d) { return d.toolCalls; }),
         color: U.token('--series-4')
       })]),
       VH.col(3, [VH.tile({
-        label: 'Aktyvios dienos', value: U.num(now.activeDays),
+        label: 'Active days', value: U.num(now.activeDays),
         unit: ' / ' + now.days,
         delta: Data.pctChange(now.activeDays, was.activeDays),
-        foot: 'serija: ' + Data.streaks(slice).current + ' d. iš eilės',
+        foot: 'streak: ' + Data.streaks(slice).current + ' days',
         spark: VH.spark(slice, function (d) { return d.sessions > 0 ? 1 : 0; }),
         color: U.token('--series-6')
       })])
     ]));
 
-    /* --- Žetonų srautas + sudėtis ----------------------------------------- */
+    /* --- Token flow + composition -------------------------------------------- */
 
-    frag.appendChild(VH.section('Žetonų srautas', 'kiek modelis perskaitė ir parašė per laikotarpį'));
+    frag.appendChild(VH.section('Token flow', 'how much the model read and wrote over the period'));
 
     var flowLabels = slice.map(function (d) { return U.dayLabel(d.date); });
     frag.appendChild(VH.grid([
       VH.col(8, [Chart.card({
-        title: 'Žetonai per dieną',
-        sub: 'įvestis + išvestis + podėlis, ' + state.rangeLabel.toLowerCase(),
+        title: 'Tokens per day',
+        sub: 'input + output + cache, ' + state.rangeLabel.toLowerCase(),
         render: function (w) {
           return Chart.lineChart(w, {
             labels: flowLabels,
             height: 268,
             area: true,
             format: U.compact,
-            series: [{ name: 'Žetonai', color: U.token('--series-1'),
+            series: [{ name: 'Tokens', color: U.token('--series-1'),
                        values: slice.map(function (d) { return d.tokensTotal; }) }],
             tipTitle: function (i) { return U.fullDate(slice[i].date); },
             tipFoot: function (i) {
-              return slice[i].sessions + ' sesijos · ' + U.money(Data.dayCost(slice[i]));
+              return slice[i].sessions + ' sessions · ' + U.money(Data.dayCost(slice[i]));
             }
           });
         },
         table: function () {
           return Chart.table(
-            [{ label: 'Data' }, { label: 'Žetonai', num: true }, { label: 'Sesijos', num: true },
-             { label: 'Pranešimai', num: true }, { label: 'Kaštai', num: true }],
+            [{ label: 'Date' }, { label: 'Tokens', num: true }, { label: 'Sessions', num: true },
+             { label: 'Messages', num: true }, { label: 'Cost', num: true }],
             slice.slice().reverse().map(function (d) {
               return [U.fullDate(d.date), U.num(d.tokensTotal), U.num(d.sessions),
                       U.num(d.messages), U.money(Data.dayCost(d))];
@@ -104,9 +104,9 @@ Views.apzvalga = (function () {
       VH.col(4, [compositionCard(slice, now)])
     ]));
 
-    /* --- Projektai + modeliai --------------------------------------------- */
+    /* --- Projects + models ---------------------------------------------------- */
 
-    frag.appendChild(VH.section('Kur dirbama', 'projektų ir modelių pasiskirstymas'));
+    frag.appendChild(VH.section('Where the work goes', 'split by project and by model'));
 
     var projects = Data.byProject(slice);
     frag.appendChild(VH.grid([
@@ -114,17 +114,17 @@ Views.apzvalga = (function () {
       VH.col(5, [modelsCard(slice)])
     ]));
 
-    /* --- Kalendorius ------------------------------------------------------- */
+    /* --- Calendar -------------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Aktyvumo kalendorius', 'pranešimų kiekis kiekvieną dieną'));
+    frag.appendChild(VH.section('Activity calendar', 'messages sent on each day'));
     frag.appendChild(VH.grid([
       VH.col(7, [calendarCard(slice)]),
       VH.col(5, [hottestDaysCard(slice)])
     ]));
 
-    /* --- Paskutinės sesijos ------------------------------------------------ */
+    /* --- Recent sessions -------------------------------------------------------- */
 
-    frag.appendChild(VH.section('Paskutinės sesijos', 'naujausias darbas, naujausias viršuje'));
+    frag.appendChild(VH.section('Recent sessions', 'newest work first'));
     frag.appendChild(VH.grid([
       VH.col(7, [sessionsCard()]),
       VH.col(5, [balanceCard(now, was)])
@@ -133,69 +133,69 @@ Views.apzvalga = (function () {
     return frag;
   }
 
-  /* --- Kortelė: žetonų sudėtis ------------------------------------------- */
+  /* --- Card: token composition ------------------------------------------------ */
 
   function compositionCard(slice, now) {
     var parts = [
-      { name: 'Podėlio skaitymas', value: now.cacheRead, color: U.token('--series-1') },
-      { name: 'Įvestis', value: now.tokensIn, color: U.token('--series-2') },
-      { name: 'Podėlio rašymas', value: now.cacheWrite, color: U.token('--series-3') },
-      { name: 'Išvestis', value: now.tokensOut, color: U.token('--series-4') }
+      { name: 'Cache read', value: now.cacheRead, color: U.token('--series-1') },
+      { name: 'Input', value: now.tokensIn, color: U.token('--series-2') },
+      { name: 'Cache write', value: now.cacheWrite, color: U.token('--series-3') },
+      { name: 'Output', value: now.tokensOut, color: U.token('--series-4') }
     ];
     return Chart.card({
-      title: 'Žetonų sudėtis',
-      sub: 'podėlio dalis rodo, kiek sutaupoma',
+      title: 'Token composition',
+      sub: 'the cache share is what you are not paying full price for',
       legendAfter: Chart.legend(parts.map(function (p) {
-        return { name: p.name, color: p.color, note: U.dec((p.value / (now.tokensTotal || 1)) * 100, 0) + ' %' };
+        return { name: p.name, color: p.color, note: U.dec((p.value / (now.tokensTotal || 1)) * 100, 0) + '%' };
       })),
       render: function (w) {
         return Chart.donut(w, {
           size: 190,
           slices: parts,
           format: U.compact,
-          valueName: 'Žetonai',
-          centerValue: U.dec(now.cacheHitRate, 0) + ' %',
-          centerLabel: 'iš podėlio'
+          valueName: 'Tokens',
+          centerValue: U.dec(now.cacheHitRate, 0) + '%',
+          centerLabel: 'from cache'
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Tipas' }, { label: 'Žetonai', num: true }, { label: 'Dalis', num: true }],
+          [{ label: 'Type' }, { label: 'Tokens', num: true }, { label: 'Share', num: true }],
           parts.map(function (p) {
-            return [p.name, U.num(Math.round(p.value)), U.dec((p.value / (now.tokensTotal || 1)) * 100, 1) + ' %'];
+            return [p.name, U.num(Math.round(p.value)), U.dec((p.value / (now.tokensTotal || 1)) * 100, 1) + '%'];
           })
         );
       }
     });
   }
 
-  /* --- Kortelė: daugiausiai dirbti projektai ------------------------------ */
+  /* --- Card: most-worked projects ---------------------------------------------- */
 
   function projectsCard(projects) {
     var top = projects.slice(0, 7);
     var max = top.length ? top[0].tokens : 1;
     var accent = U.token('--series-1');
     return Chart.card({
-      title: 'Daugiausiai dirbti projektai',
-      sub: 'pagal sunaudotus žetonus',
+      title: 'Most-worked projects',
+      sub: 'by tokens consumed',
       render: function (w) {
         return Chart.barsH(w, {
           rows: top.map(function (p) {
             return {
               label: p.name, value: Math.round(p.tokens),
-              note: Math.round(p.sessions) + ' sesijos · ' + U.money(p.cost)
+              note: Math.round(p.sessions) + ' sessions · ' + U.money(p.cost)
             };
           }),
           color: accent,
           format: U.compact,
-          valueName: 'Žetonai',
+          valueName: 'Tokens',
           rowHeight: 36
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Projektas' }, { label: 'Kalba' }, { label: 'Žetonai', num: true },
-           { label: 'Sesijos', num: true }, { label: 'Kaštai', num: true }, { label: 'Dalis' }],
+          [{ label: 'Project' }, { label: 'Language' }, { label: 'Tokens', num: true },
+           { label: 'Sessions', num: true }, { label: 'Cost', num: true }, { label: 'Share' }],
           projects.map(function (p) {
             return [p.name, p.lang, U.num(Math.round(p.tokens)), U.num(Math.round(p.sessions)),
                     U.money(p.cost), { node: VH.barCell(p.tokens, max, accent) }];
@@ -205,7 +205,7 @@ Views.apzvalga = (function () {
     });
   }
 
-  /* --- Kortelė: modeliai -------------------------------------------------- */
+  /* --- Card: models ------------------------------------------------------------ */
 
   function modelsCard(slice) {
     var models = Data.byModel(slice);
@@ -214,48 +214,48 @@ Views.apzvalga = (function () {
       return { name: m.name, value: m.tokens, color: U.seriesColor(m.slot), cost: m.cost, messages: m.messages };
     });
     return Chart.card({
-      title: 'Modelių pasiskirstymas',
-      sub: 'kuris modelis kiek dirbo',
+      title: 'Model split',
+      sub: 'which model did how much of the work',
       legendAfter: Chart.legend(withColor.map(function (m) {
-        return { name: m.name, color: m.color, note: U.dec((m.value / total) * 100, 0) + ' %' };
+        return { name: m.name, color: m.color, note: U.dec((m.value / total) * 100, 0) + '%' };
       })),
       render: function (w) {
         return Chart.donut(w, {
-          size: 190, slices: withColor, format: U.compact, valueName: 'Žetonai',
-          centerValue: U.compact(total), centerLabel: 'žetonų'
+          size: 190, slices: withColor, format: U.compact, valueName: 'Tokens',
+          centerValue: U.compact(total), centerLabel: 'tokens'
         });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Modelis' }, { label: 'Žetonai', num: true }, { label: 'Pranešimai', num: true },
-           { label: 'Kaštai', num: true }, { label: 'Dalis', num: true }],
+          [{ label: 'Model' }, { label: 'Tokens', num: true }, { label: 'Messages', num: true },
+           { label: 'Cost', num: true }, { label: 'Share', num: true }],
           withColor.map(function (m) {
             return [m.name, U.num(Math.round(m.value)), U.num(Math.round(m.messages)),
-                    U.money(m.cost), U.dec((m.value / total) * 100, 1) + ' %'];
+                    U.money(m.cost), U.dec((m.value / total) * 100, 1) + '%'];
           })
         );
       }
     });
   }
 
-  /* --- Kortelė: kalendorius ----------------------------------------------- */
+  /* --- Card: calendar ----------------------------------------------------------- */
 
   function calendarCard(slice) {
     var days = slice.map(function (d) {
-      return { date: d.date, value: d.messages, note: d.sessions + ' sesijos · ' + U.compact(d.tokensTotal) + ' žetonų' };
+      return { date: d.date, value: d.messages, note: d.sessions + ' sessions · ' + U.compact(d.tokensTotal) + ' tokens' };
     });
     var st = Data.streaks(slice);
     return Chart.card({
-      title: 'Kasdienis aktyvumas',
-      sub: 'ilgiausia serija — ' + st.best + ' d. iš eilės',
+      title: 'Daily activity',
+      sub: 'longest streak — ' + st.best + ' days',
       flush: true,
-      legendAfter: Chart.rampLegend('tyliau', 'karščiau'),
+      legendAfter: Chart.rampLegend('quieter', 'busier'),
       render: function (w) {
-        return Chart.calendarHeatmap(w - 14, { days: days, valueName: 'Pranešimai' });
+        return Chart.calendarHeatmap(w - 14, { days: days, valueName: 'Messages' });
       },
       table: function () {
         return Chart.table(
-          [{ label: 'Data' }, { label: 'Savaitės diena' }, { label: 'Pranešimai', num: true }, { label: 'Sesijos', num: true }],
+          [{ label: 'Date' }, { label: 'Weekday' }, { label: 'Messages', num: true }, { label: 'Sessions', num: true }],
           slice.slice().reverse().filter(function (d) { return d.messages > 0; }).map(function (d) {
             return [U.fullDate(d.date), U.WEEKDAYS_LONG[d.weekday], U.num(d.messages), U.num(d.sessions)];
           })
@@ -264,7 +264,7 @@ Views.apzvalga = (function () {
     });
   }
 
-  /* --- Kortelė: karščiausios dienos --------------------------------------- */
+  /* --- Card: hottest days --------------------------------------------------------- */
 
   function hottestDaysCard(slice) {
     var top = slice.slice().sort(function (a, b) { return b.tokensTotal - a.tokensTotal; }).slice(0, 6);
@@ -276,7 +276,7 @@ Views.apzvalga = (function () {
         el('div', { class: 'list__main' }, [
           el('div', { class: 'list__title', text: U.fullDate(d.date) }),
           el('div', { class: 'list__meta',
-            text: d.sessions + ' sesijos · ' + U.num(d.messages) + ' pranešimų · ' + U.money(Data.dayCost(d)) })
+            text: d.sessions + ' sessions · ' + U.num(d.messages) + ' messages · ' + U.money(Data.dayCost(d)) })
         ]),
         el('div', { style: { width: '84px', flex: 'none' } }, [VH.barCell(d.tokensTotal, max, accent)]),
         el('div', { class: 'list__val', style: { minWidth: '68px', textAlign: 'right' },
@@ -286,15 +286,15 @@ Views.apzvalga = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Karščiausios dienos' }),
-          el('p', { class: 'card__sub', text: 'daugiausiai žetonų sunaudojusios dienos' })
+          el('h3', { class: 'card__title', text: 'Hottest days' }),
+          el('p', { class: 'card__sub', text: 'the days that consumed the most tokens' })
         ])
       ]),
       el('div', { class: 'card__body' }, [list])
     ]);
   }
 
-  /* --- Kortelė: paskutinės sesijos ---------------------------------------- */
+  /* --- Card: recent sessions ------------------------------------------------------ */
 
   function sessionsCard() {
     var rows = Data.recentSessions(9);
@@ -313,8 +313,8 @@ Views.apzvalga = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Sesijų juosta' }),
-          el('p', { class: 'card__sub', text: 'projektas, modelis, trukmė ir sunaudoti žetonai' })
+          el('h3', { class: 'card__title', text: 'Session feed' }),
+          el('p', { class: 'card__sub', text: 'project, model, duration and tokens used' })
         ])
       ]),
       el('div', { class: 'card__body' }, [list])
@@ -326,17 +326,17 @@ Views.apzvalga = (function () {
     return U.seriesColor(p ? p.slot : 0);
   }
 
-  /* --- Kortelė: santrauka skaičiais --------------------------------------- */
+  /* --- Card: summary numbers ------------------------------------------------------- */
 
   function balanceCard(now, was) {
     var rows = [
-      ['Žetonų vienai sesijai', U.compact(now.avgSession)],
-      ['Žetonų aktyviai dienai', U.compact(now.avgPerActiveDay)],
-      ['Podėlio pataikymas', U.pct(now.cacheHitRate, 1)],
-      ['Pridėta eilučių', U.num(now.linesAdded)],
-      ['Pašalinta eilučių', U.num(now.linesRemoved)],
-      ['Kaštai vienai sesijai', U.money(now.cost / Math.max(1, now.sessions))],
-      ['Kaštai 1 mln. žetonų', U.money(now.cost / Math.max(1, now.tokensTotal / 1e6))]
+      ['Tokens per session', U.compact(now.avgSession)],
+      ['Tokens per active day', U.compact(now.avgPerActiveDay)],
+      ['Cache hit rate', U.pct(now.cacheHitRate, 1)],
+      ['Lines added', U.num(now.linesAdded)],
+      ['Lines removed', U.num(now.linesRemoved)],
+      ['Cost per session', U.money(now.cost / Math.max(1, now.sessions))],
+      ['Cost per 1M tokens', U.money(now.cost / Math.max(1, now.tokensTotal / 1e6))]
     ];
     var dl = el('dl', { class: 'kv' });
     rows.forEach(function (r) {
@@ -346,23 +346,23 @@ Views.apzvalga = (function () {
     return el('div', { class: 'card' }, [
       el('div', { class: 'card__head' }, [
         el('div', { class: 'card__titles' }, [
-          el('h3', { class: 'card__title', text: 'Santrauka' }),
-          el('p', { class: 'card__sub', text: 'vidurkiai per pasirinktą laikotarpį' })
+          el('h3', { class: 'card__title', text: 'Summary' }),
+          el('p', { class: 'card__sub', text: 'averages across the selected period' })
         ])
       ]),
       el('div', { class: 'card__body' }, [
         dl,
         el('div', { style: { marginTop: '14px' } }, [
-          VH.note('Demo duomenys.', 'Skaičiai sugeneruoti vietoje, kad skydas veiktų be serverio. ' +
-            'Realų šaltinį prijunk „Nustatymų" skirtuke.')
+          VH.note('Demo data.', 'These numbers are generated locally so the dashboard runs with ' +
+            'no server. Wire up a real source in the Settings tab.')
         ])
       ])
     ]);
   }
 
   return {
-    title: 'Apžvalga',
-    sub: 'Claude paskyros naudojimas',
+    title: 'Overview',
+    sub: 'Claude account usage',
     needsRange: true,
     render: render
   };

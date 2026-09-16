@@ -1,12 +1,12 @@
 /* =============================================================================
-   charts.js — savos SVG grafikų komponentės.
-   Taisyklės, kurių laikomasi visur:
-     · viena y ašis (niekada dviguba);
-     · plonos žymos: 2px linijos, <=24px stulpeliai, 4px apvalintas duomenų galas;
-     · 2px tarpas paviršiaus spalva tarp besiliečiančių žymų (ne apvadas);
-     · plaukų linijos tinklelis, vientisas, niekada punktyrinis;
-     · legenda visada, kai serijų >= 2; tiesioginės etiketės — atrankiai;
-     · kiekvienas grafikas turi lentelės dvynį (reikšmė pasiekiama be pelės).
+   charts.js — hand-rolled SVG chart components.
+   Rules applied everywhere:
+     · one y axis (never dual);
+     · thin marks: 2px lines, <=24px bars, 4px rounded data-end;
+     · 2px surface-coloured gap between touching marks (never a border);
+     · hairline gridlines, solid, never dashed;
+     · a legend whenever there are >= 2 series; direct labels used sparingly;
+     · every chart has a table twin (values reachable without a pointer).
    ========================================================================== */
 window.Chart = (function () {
   'use strict';
@@ -14,13 +14,13 @@ window.Chart = (function () {
   var el = U.el;
   var NS = 'http://www.w3.org/2000/svg';
 
-  /* --- Patarimų burbulas (tooltip) ----------------------------------------- */
+  /* --- Tooltip -------------------------------------------------------------- */
 
   var tipNode = null;
   function tip() { return tipNode || (tipNode = document.getElementById('tooltip')); }
 
   /**
-   * @param rows [{name, value, color}] — value jau suformatuota eilutė
+   * @param rows [{name, value, color}] — value is an already-formatted string
    */
   function showTip(evt, title, rows, foot) {
     var t = tip();
@@ -53,7 +53,7 @@ window.Chart = (function () {
 
   function hideTip() { var t = tip(); t.hidden = true; }
 
-  /* --- SVG pagalbinės ------------------------------------------------------ */
+  /* --- SVG helpers ---------------------------------------------------------- */
 
   function svg(w, h, cls) {
     var s = document.createElementNS(NS, 'svg');
@@ -65,7 +65,7 @@ window.Chart = (function () {
     return s;
   }
 
-  /** Stačiakampis su apvalintu vienu galu (duomenų galas), kitas — status. */
+  /** Rectangle with one rounded end (the data end); the baseline end stays square. */
   function roundedEnd(x, y, w, h, r, side) {
     if (w <= 0 || h <= 0) return '';
     var rr = Math.min(r, w / 2, h / 2);
@@ -89,11 +89,11 @@ window.Chart = (function () {
     return pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('');
   }
 
-  /* --- Legenda ------------------------------------------------------------- */
+  /* --- Legend --------------------------------------------------------------- */
 
   /**
-   * Legenda privaloma, kai serijų >= 2. Viena serija legendos neturi —
-   * antraštė jau pasako, kas nubraižyta.
+   * A legend is mandatory for >= 2 series. A single series gets none — the
+   * title already says what is plotted.
    */
   function legend(series, kind) {
     var box = el('div', { class: 'legend' });
@@ -110,11 +110,11 @@ window.Chart = (function () {
     return box;
   }
 
-  /* --- Kortelė su grafiko / lentelės perjungimu ---------------------------- */
+  /* --- Card with a chart / table toggle ------------------------------------- */
 
   /**
-   * @param cfg.render(width) -> DOM mazgas (grafikas)
-   * @param cfg.table()       -> DOM mazgas (lentelės dvynys)
+   * @param cfg.render(width) -> DOM node (the chart)
+   * @param cfg.table()       -> DOM node (the table twin)
    */
   function card(cfg) {
     var body = el('div', { class: 'card__body' + (cfg.flush ? ' card__body--flush' : '') });
@@ -132,12 +132,12 @@ window.Chart = (function () {
     function tableToggle() {
       var btn = el('button', {
         class: 'link-btn', type: 'button', 'aria-pressed': 'false',
-        title: 'Rodyti reikšmes lentele',
-        text: 'Lentelė',
+        title: 'Show the values as a table',
+        text: 'Table',
         onclick: function () {
           var on = root.classList.toggle('show-table');
           btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-          btn.textContent = on ? 'Grafikas' : 'Lentelė';
+          btn.textContent = on ? 'Chart' : 'Table';
           if (!on) redraw();
         }
       });
@@ -170,7 +170,7 @@ window.Chart = (function () {
     return root;
   }
 
-  /* Perbraižymas keičiant lango plotį — su „rAF" ribojimu. */
+  /* Redraw on viewport resize — throttled with rAF. */
   var responsive = [];
   var pending = false;
   function registerResponsive(node, fn) {
@@ -193,7 +193,7 @@ window.Chart = (function () {
   });
 
   /* =========================================================================
-     1. Sparklainas — 12 taškų, dabartinis laikotarpis akcentu.
+     1. Sparkline — 12 points, the current period in the accent hue.
      ====================================================================== */
   function sparkline(values, opts) {
     var o = opts || {};
@@ -230,7 +230,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     2. Linijų / ploto grafikas su kryžiuku ir vienu bendru patarimu.
+     2. Line / area chart with a crosshair and one shared tooltip.
      cfg: {labels[], series:[{name,color,values[]}], height, format, yFormat,
            area, dashedFuture}
      ====================================================================== */
@@ -240,16 +240,16 @@ window.Chart = (function () {
     var pw = width - m.l - m.r;
     var ph = h - m.t - m.b;
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || cfg.title || 'Linijinis grafikas');
+    s.setAttribute('aria-label', cfg.ariaLabel || cfg.title || 'Line chart');
 
     var n = cfg.labels.length;
     var allMax = 0;
     cfg.series.forEach(function (ser) {
       ser.values.forEach(function (v) { if (v > allMax) allMax = v; });
     });
-    /* Numatytoji bazė — nulis. `zoomY` leidžia priartinti tik TENDENCIJOS
-       grafikams (pvz., winrate apie 50 %), kur nulinė ašis nieko nepasako;
-       stulpeliams tai draudžiama — jų ilgis matuojamas nuo nulio. */
+    /* The baseline is zero by default. `zoomY` may zoom only TREND charts
+       (e.g. win rate around 50%), where a zero axis says nothing; bars are
+       never allowed to do this — their length is measured from zero. */
     var allMin = Infinity;
     cfg.series.forEach(function (ser) {
       ser.values.forEach(function (v) { if (v < allMin) allMin = v; });
@@ -275,14 +275,14 @@ window.Chart = (function () {
     var x = function (i) { return m.l + (n <= 1 ? pw / 2 : (i / (n - 1)) * pw); };
     var y = function (v) { return m.t + ph - ((v - yMin) / (yMax - yMin)) * ph; };
 
-    /* Tinklelis ir y ašies žymos */
+    /* Gridlines and y-axis ticks */
     yTicks.forEach(function (t) {
       s.appendChild(el('line', { class: 'grid-line', x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) }));
       s.appendChild(el('text', { class: 'tick', x: m.l - 8, y: y(t) + 3.5, 'text-anchor': 'end', text: fmtY(t) }));
     });
     s.appendChild(el('line', { class: 'axis-line', x1: m.l, x2: m.l + pw, y1: m.t + ph, y2: m.t + ph }));
 
-    /* X ašies žymos — retinamos, kad nesusiliestų */
+    /* X-axis ticks — thinned out so they never collide */
     var everyX = Math.max(1, Math.ceil(n / Math.max(3, Math.floor(pw / 78))));
     cfg.labels.forEach(function (lab, i) {
       if (i % everyX !== 0 && i !== n - 1) return;
@@ -294,7 +294,7 @@ window.Chart = (function () {
       }));
     });
 
-    /* Plotas — tik kai serija viena (kitaip persidengia ir meluoja) */
+    /* Area fill — single series only (overlapping fills misstate the data) */
     if (cfg.area && cfg.series.length === 1 && !cfg.zoomY) {
       var ser0 = cfg.series[0];
       var pts0 = ser0.values.map(function (v, i) { return [x(i), y(v)]; });
@@ -304,14 +304,14 @@ window.Chart = (function () {
       }));
     }
 
-    /* Linijos */
+    /* Lines */
     cfg.series.forEach(function (ser) {
       var pts = ser.values.map(function (v, i) { return [x(i), y(v)]; });
       s.appendChild(el('path', {
         d: linePath(pts), fill: 'none', stroke: ser.color,
         'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
       }));
-      /* Galinis taškas su 2px paviršiaus žiedu */
+      /* End marker with a 2px surface ring */
       var last = pts[pts.length - 1];
       s.appendChild(el('circle', {
         cx: last[0], cy: last[1], r: 4, fill: ser.color,
@@ -319,7 +319,7 @@ window.Chart = (function () {
       }));
     });
 
-    /* Atrankinė tiesioginė etiketė: tik viršūnė, ir tik kai serija viena */
+    /* One selective direct label: the peak, and only for a single series */
     if (cfg.series.length === 1 && cfg.peakLabel !== false && n > 2) {
       var vals = cfg.series[0].values;
       var pi = vals.indexOf(Math.max.apply(null, vals));
@@ -332,7 +332,7 @@ window.Chart = (function () {
       }
     }
 
-    /* Kryžiukas: skaitytojas taiko į datą, ne į 2px liniją */
+    /* Crosshair: the reader aims at a date, never at a 2px line */
     var cross = el('line', { class: 'crosshair', y1: m.t, y2: m.t + ph, x1: -99, x2: -99, opacity: '0' });
     s.appendChild(cross);
     var dots = el('g', { opacity: '0', 'pointer-events': 'none' });
@@ -376,7 +376,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     3. Sukrauti stulpeliai. 2px paviršiaus tarpas tarp segmentų ir kaimynų.
+     3. Stacked bars. A 2px surface gap between segments and neighbours.
      cfg: {labels[], series:[{name,color,values[]}], height, format}
      ====================================================================== */
   function stackedBars(width, cfg) {
@@ -384,7 +384,7 @@ window.Chart = (function () {
     var m = { t: 12, r: 14, b: 26, l: 46 };
     var pw = width - m.l - m.r, ph = h - m.t - m.b;
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Sukrautų stulpelių grafikas');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Stacked bar chart');
 
     var n = cfg.labels.length;
     var totals = cfg.labels.map(function (_, i) {
@@ -397,7 +397,7 @@ window.Chart = (function () {
 
     var band = pw / Math.max(1, n);
     var bw = Math.min(cfg.barWidth || 24, Math.max(3, band - Math.max(3, band * 0.32)));
-    var GAP = 2;                                  /* paviršiaus tarpas */
+    var GAP = 2;                                  /* surface gap */
     var surface = U.token('--surface-1');
 
     yTicks.forEach(function (t) {
@@ -414,7 +414,7 @@ window.Chart = (function () {
     cfg.labels.forEach(function (lab, i) {
       var cx = m.l + band * i + band / 2;
       var showTick = i % everyX === 0 || i === n - 1;
-      /* Paskutinė žyma praleidžiama, jei ji lipa ant prieš tai nupieštos */
+      /* Drop the last tick when it would overlap the previously drawn one */
       if (i === n - 1 && (n - 1) % everyX !== 0 && (n - 1 - Math.floor((n - 1) / everyX) * everyX) < everyX * 0.6) {
         showTick = false;
       }
@@ -424,7 +424,7 @@ window.Chart = (function () {
       var acc = 0;
       var top = m.t + ph;
       var g = el('g', { class: 'mark' });
-      /* Braižoma iš apačios; viršutinis segmentas gauna 4px apvalinimą */
+      /* Drawn bottom-up; the top segment gets the 4px rounding */
       var stack = [];
       cfg.series.forEach(function (ser, k) {
         var v = ser.values[i] || 0;
@@ -465,7 +465,7 @@ window.Chart = (function () {
         return { name: ser.name, value: fmtV(ser.values[i] || 0), color: ser.color };
       }).filter(function (r, k) { return (cfg.series[k].values[i] || 0) > 0; });
       showTip(evt, cfg.tipTitle ? cfg.tipTitle(i) : cfg.labels[i], rows,
-        'Iš viso ' + fmtV(totals[i]));
+        'Total ' + fmtV(totals[i]));
     }
     function cool() {
       s.classList.remove('is-hovering');
@@ -474,7 +474,7 @@ window.Chart = (function () {
     }
     s.addEventListener('pointerleave', cool);
 
-    /* Kaimyninių stulpelių atskyrimas — tarpas paviršiaus spalva, ne apvadas */
+    /* Neighbouring bars are separated by a surface-coloured gap, not a border */
     if (bw >= band - 2) {
       marks.setAttribute('shape-rendering', 'crispEdges');
       s.appendChild(el('rect', { x: 0, y: 0, width: 0, height: 0, fill: surface }));
@@ -483,7 +483,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     4. Horizontalūs stulpeliai — reikšmė ties galu, viena spalva vienai serijai.
+     4. Horizontal bars — value at the tip, one colour per series.
      cfg: {rows:[{label, value, color?, note?}], height?, format, max?}
      ====================================================================== */
   function barsH(width, cfg) {
@@ -495,7 +495,7 @@ window.Chart = (function () {
     var m = { t: 5, r: valueW, l: labelW };
     var pw = Math.max(20, width - m.l - m.r - 8);
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Horizontalių stulpelių grafikas');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Horizontal bar chart');
 
     var max = cfg.max || Math.max.apply(null, rows.map(function (r) { return r.value; }).concat([1]));
     var fmt = cfg.format || U.num;
@@ -513,7 +513,7 @@ window.Chart = (function () {
         style: { fill: 'var(--text-secondary)', fontSize: '12px' },
         text: r.label
       }));
-      /* Vėžė — kad trumpi stulpeliai turėtų kontekstą */
+      /* Track — gives short bars some context */
       g.appendChild(el('rect', {
         x: m.l, y: cy - barH / 2, width: pw, height: barH, rx: 4,
         fill: U.token('--surface-2')
@@ -521,7 +521,7 @@ window.Chart = (function () {
       g.appendChild(el('path', {
         d: roundedEnd(m.l, cy - barH / 2, w, barH, 4, 'right'), fill: color
       }));
-      /* Reikšmė ties galu — už stulpelio, niekada jo viduje (nenukirpta) */
+      /* Value at the tip — outside the bar, never inside it (never clipped) */
       g.appendChild(el('text', {
         class: 'dlabel', x: m.l + pw + 8, y: cy + 4, 'text-anchor': 'start', text: fmt(r.value)
       }));
@@ -539,7 +539,7 @@ window.Chart = (function () {
       U.qsa('.mark', s).forEach(function (o) { o.classList.remove('is-hot'); });
       g.classList.add('is-hot');
       showTip(evt, r.label,
-        [{ name: cfg.valueName || 'Reikšmė', value: fmt(r.value), color: color }], r.note);
+        [{ name: cfg.valueName || 'Value', value: fmt(r.value), color: color }], r.note);
     }
     function barCool() {
       s.classList.remove('is-hovering');
@@ -551,8 +551,8 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     4b. Diverguojantys stulpeliai — nuokrypis nuo bazinės linijos.
-     Du priešingi poliai (mėlyna / raudona) + pilkas neutralus vidurys.
+     4b. Diverging bars — deviation from a baseline.
+     Two opposing poles (blue / red) with a neutral grey midpoint.
      cfg: {rows:[{label, value}], baseline, format, height?}
      ====================================================================== */
   function divergingBarsH(width, cfg) {
@@ -564,21 +564,21 @@ window.Chart = (function () {
     var m = { t: 5, l: labelW, r: valueW };
     var pw = Math.max(20, width - m.l - m.r - 8);
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Diverguojančių stulpelių grafikas');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Diverging bar chart');
 
     var span = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.value); }).concat([0.1]));
     span = U.niceCeil(span);
     var zero = m.l + pw * (cfg.zeroAt === undefined ? 0.5 : cfg.zeroAt);
-    /* Kiekviena pusė naudoja savo laisvą plotį — bendra skalė lieka viena,
-       nes span abiem pusėms tas pats; tik brėžimo ilgis skiriasi. */
+    /* Each side uses its own free width — the scale stays single, since the
+       span is shared; only the drawing length differs. */
     var posHalf = m.l + pw - zero;
     var negHalf = zero - m.l;
-    var pos = U.token('--series-1');       /* šiltas/šaltas polius: virš bazės */
-    var neg = U.token('--series-8');       /* po baze */
+    var pos = U.token('--series-1');       /* cool pole: above the baseline */
+    var neg = U.token('--series-8');       /* warm pole: below the baseline */
     var fmt = cfg.format || U.num;
     var barH = Math.min(cfg.barHeight || 14, rowH - 12);
 
-    /* Neutralus vidurys — pilka plaukų linija, ne spalvota */
+    /* Neutral midpoint — a grey hairline, never a hue */
     s.appendChild(el('line', {
       class: 'axis-line', x1: zero, x2: zero, y1: m.t - 2, y2: m.t + rows.length * rowH,
       stroke: U.token('--axis')
@@ -622,7 +622,7 @@ window.Chart = (function () {
       U.qsa('.mark', s).forEach(function (o) { o.classList.remove('is-hot'); });
       g.classList.add('is-hot');
       showTip(evt, r.label, (cfg.tipRows ? cfg.tipRows(r) : [
-        { name: cfg.valueName || 'Nuokrypis', value: fmt(r.value), color: color }
+        { name: cfg.valueName || 'Deviation', value: fmt(r.value), color: color }
       ]), r.note);
     }
     s.addEventListener('pointerleave', function () {
@@ -633,7 +633,7 @@ window.Chart = (function () {
     return s;
   }
 
-  /** Apvalintas kairysis galas (veidrodinis roundedEnd „right"). */
+  /** Rounded left end (the mirror of roundedEnd 'right'). */
   function mirrorRight(x, y, w, h, r) {
     var rr = Math.min(r, w / 2, h / 2);
     return 'M' + (x + w) + ' ' + y +
@@ -645,17 +645,17 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     5. Žiedas — dalis visumos „iš pirmo žvilgsnio", <= 6 segmentai.
+     5. Donut — part-to-whole at a glance, <= 6 segments.
      ====================================================================== */
   function donut(width, cfg) {
     var size = Math.min(width, cfg.size || 200);
     var s = svg(width, size);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Žiedinė diagrama');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Donut chart');
     var cx = width / 2, cy = size / 2;
     var R = size / 2 - 4, r = R * (cfg.thickness || 0.62);
     var total = U.sum(cfg.slices, function (d) { return d.value; }) || 1;
     var fmt = cfg.format || U.num;
-    var GAP_DEG = 2.4;                            /* tarpas, ne apvadas */
+    var GAP_DEG = 2.4;                            /* a gap, not a border */
 
     var a0 = -90;
     cfg.slices.forEach(function (d) {
@@ -674,7 +674,7 @@ window.Chart = (function () {
       a0 = a1;
     });
 
-    /* Centre — bendra suma (skaičius yra grafiko esmė) */
+    /* Centre — the total (the number is the point of the chart) */
     s.appendChild(el('text', {
       x: cx, y: cy - 2, 'text-anchor': 'middle',
       style: { fill: 'var(--text-primary)', fontSize: '21px', fontWeight: '640' },
@@ -692,8 +692,8 @@ window.Chart = (function () {
       s.classList.add('is-hovering');
       U.qsa('.mark', s).forEach(function (o) { o.classList.remove('is-hot'); });
       g.classList.add('is-hot');
-      showTip(evt, d.name, [{ name: cfg.valueName || 'Kiekis', value: fmt(d.value), color: d.color }],
-        U.dec((sweep / 360) * 100, 1) + ' % visumos');
+      showTip(evt, d.name, [{ name: cfg.valueName || 'Amount', value: fmt(d.value), color: d.color }],
+        U.dec((sweep / 360) * 100, 1) + '% of total');
     }
     s.addEventListener('pointerleave', function () {
       s.classList.remove('is-hovering');
@@ -704,10 +704,9 @@ window.Chart = (function () {
   }
 
   /**
-   * Švari skalė intervalui [lo, hi]: parenkamas standartinis žingsnis
-   * (1 / 2 / 2,5 / 5 × 10^n), o rėžiai PLEČIAMI iki jo kartotinių — taip
-   * ašis visada prasideda ir baigiasi apvaliu skaičiumi ir niekada
-   * nenukerpa duomenų.
+   * A clean scale for [lo, hi]: picks a standard step (1 / 2 / 2.5 / 5 ×
+   * 10^n) and EXPANDS the bounds to its multiples — so the axis always
+   * starts and ends on a round number and never clips the data.
    */
   function niceScale(lo, hi, count, integerOnly) {
     var span = hi - lo;
@@ -745,7 +744,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     6. Kalendoriaus šilumos žemėlapis — nuosekli VIENOS spalvos rampa.
+     6. Calendar heatmap — a sequential SINGLE-hue ramp.
      cfg: {days:[{date, value}], height?, format, weeks?}
      ====================================================================== */
   function calendarHeatmap(width, cfg) {
@@ -760,12 +759,12 @@ window.Chart = (function () {
     var avail = width - leftPad - 4;
     var step = U.clamp(Math.floor(avail / weeks), 8, cell + gap);
     var cs = Math.max(6, step - gap);
-    /* Trumpuose intervaluose tinklelis nesiekia krašto — jį centruojame,
-       kad kortelėje neliktų vienos tuščios pusės. */
+    /* On short ranges the grid does not reach the edge — centre it so the
+       card is not left with one empty half. */
     leftPad += Math.max(0, Math.floor((avail - weeks * step) / 2));
     var h = topPad + 7 * step + 8;
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Aktyvumo kalendorius');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Activity calendar');
 
     var max = Math.max.apply(null, days.map(function (d) { return d.value; }).concat([1]));
     var ramp = ['--seq-0', '--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5'].map(U.token);
@@ -778,7 +777,7 @@ window.Chart = (function () {
       return ramp[i];
     }
 
-    /* Savaitės dienų etiketės — tik kas antra, kad neperkrautų */
+    /* Weekday labels — every other one, to avoid clutter */
     [0, 2, 4, 6].forEach(function (d) {
       s.appendChild(el('text', {
         class: 'tick', x: leftPad - 7, y: topPad + d * step + cs / 2 + 3.5, 'text-anchor': 'end',
@@ -786,7 +785,7 @@ window.Chart = (function () {
       }));
     });
 
-    /* Mėnesių etiketės viršuje */
+    /* Month labels along the top */
     var lastMonth = -1;
     days.forEach(function (d, i) {
       var date = U.parseISO(d.date);
@@ -821,7 +820,7 @@ window.Chart = (function () {
       U.qsa('.mark', s).forEach(function (o) { o.classList.remove('is-hot'); });
       g.classList.add('is-hot');
       showTip(evt, U.fullDate(d.date),
-        [{ name: cfg.valueName || 'Reikšmė', value: fmt(d.value), color: shade(d.value) }],
+        [{ name: cfg.valueName || 'Value', value: fmt(d.value), color: shade(d.value) }],
         d.note || null);
     }
     s.addEventListener('pointerleave', function () {
@@ -832,22 +831,22 @@ window.Chart = (function () {
     return s;
   }
 
-  /** Nuoseklios rampos legenda (mažiau → daugiau). */
+  /** Sequential ramp legend (less → more). */
   function rampLegend(labelLow, labelHigh) {
     var box = el('div', { class: 'legend', style: { justifyContent: 'flex-end', paddingBottom: '0', paddingTop: '10px' } });
-    box.appendChild(el('span', { class: 'legend__val', text: labelLow || 'mažiau' }));
+    box.appendChild(el('span', { class: 'legend__val', text: labelLow || 'less' }));
     ['--seq-0', '--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5'].forEach(function (t) {
       box.appendChild(el('span', {
         class: 'legend__key', style: { background: U.token(t), marginRight: '0' }
       }));
     });
-    box.appendChild(el('span', { class: 'legend__val', text: labelHigh || 'daugiau' }));
+    box.appendChild(el('span', { class: 'legend__val', text: labelHigh || 'more' }));
     box.style.gap = '3px';
     return box;
   }
 
   /* =========================================================================
-     7. Matrica (savaitės diena × valanda) — ta pati viena spalvos rampa.
+     7. Matrix (weekday × hour) — the same single-hue ramp.
      ====================================================================== */
   function matrixHeatmap(width, cfg) {
     var rows = cfg.rowLabels, cols = cfg.colLabels;
@@ -858,7 +857,7 @@ window.Chart = (function () {
     var ch = cfg.cellHeight || 18;
     var h = topPad + rows.length * (ch + 2) + 6;
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Šilumos matrica');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Heatmap matrix');
 
     var max = 0;
     cfg.values.forEach(function (r) { r.forEach(function (v) { if (v > max) max = v; }); });
@@ -900,7 +899,7 @@ window.Chart = (function () {
       U.qsa('.mark', s).forEach(function (o) { o.classList.remove('is-hot'); });
       g.classList.add('is-hot');
       showTip(evt, (cfg.rowName ? r : r) + ' · ' + c,
-        [{ name: cfg.valueName || 'Reikšmė', value: fmt(v), color: shade(v) }]);
+        [{ name: cfg.valueName || 'Value', value: fmt(v), color: shade(v) }]);
     }
     s.addEventListener('pointerleave', function () {
       s.classList.remove('is-hovering');
@@ -911,7 +910,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     8. Sklaidos diagrama — artimiausio taško sluoksnis (taikinys >= 24px).
+     8. Scatter plot — nearest-point layer (hit target >= 24px).
      cfg: {points:[{x,y,r?,label,meta}], xLabel, yLabel, xFormat, yFormat,
            refX, refY, color}
      ====================================================================== */
@@ -920,7 +919,7 @@ window.Chart = (function () {
     var m = { t: 14, r: 16, b: 38, l: 48 };
     var pw = width - m.l - m.r, ph = h - m.t - m.b;
     var s = svg(width, h);
-    s.setAttribute('aria-label', cfg.ariaLabel || 'Sklaidos diagrama');
+    s.setAttribute('aria-label', cfg.ariaLabel || 'Scatter plot');
 
     var xs = cfg.points.map(function (p) { return p.x; });
     var ys = cfg.points.map(function (p) { return p.y; });
@@ -940,7 +939,7 @@ window.Chart = (function () {
     var Y = function (v) { return m.t + ph - ((v - yMin) / (yMax - yMin)) * ph; };
     var fmtX = cfg.xFormat || U.num, fmtY = cfg.yFormat || U.num;
 
-    /* Tinklelis su apvalintomis žymomis — skaitytojui reikia švarių skaičių */
+    /* Gridlines on rounded ticks — the reader needs clean numbers */
     yScale.ticks.forEach(function (yv) {
       s.appendChild(el('line', { class: 'grid-line', x1: m.l, x2: m.l + pw, y1: Y(yv), y2: Y(yv) }));
       s.appendChild(el('text', { class: 'tick', x: m.l - 8, y: Y(yv) + 3.5, 'text-anchor': 'end', text: fmtY(yv) }));
@@ -954,7 +953,7 @@ window.Chart = (function () {
     });
     s.appendChild(el('line', { class: 'axis-line', x1: m.l, x2: m.l + pw, y1: m.t + ph, y2: m.t + ph }));
 
-    /* Atskaitos linija (pvz., 50 % laimėjimų) — plaukų linija, vientisa */
+    /* Reference line (e.g. a 50% win rate) — a solid hairline */
     if (cfg.refY !== undefined && cfg.refY > yMin && cfg.refY < yMax) {
       s.appendChild(el('line', {
         class: 'axis-line', x1: m.l, x2: m.l + pw, y1: Y(cfg.refY), y2: Y(cfg.refY),
@@ -978,14 +977,14 @@ window.Chart = (function () {
       var cx = X(p.x), cy = Y(p.y);
       var dot = el('circle', {
         class: 'mark', cx: cx, cy: cy, r: p.r || 5, fill: color,
-        stroke: surface, 'stroke-width': '2'                /* 2px paviršiaus žiedas */
+        stroke: surface, 'stroke-width': '2'                /* 2px surface ring */
       });
       s.appendChild(dot);
       return { p: p, cx: cx, cy: cy, dot: dot };
     });
 
-    /* Ryškiausi taškai gauna tiesiogines etiketes — atrankiai, ne visi.
-       Susiliečiančios etiketės praleidžiamos: geriau mažiau, nei sulipę. */
+    /* The standout points get direct labels — selectively, never all of them.
+       Colliding labels are dropped: fewer labels beats overlapping ones. */
     var placed = [];
     (cfg.labelTop || []).forEach(function (name) {
       var hit0 = pts.filter(function (q) { return q.p.label === name; })[0];
@@ -1038,7 +1037,7 @@ window.Chart = (function () {
   }
 
   /* =========================================================================
-     Lentelės pagalbinė — grafiko dvynys
+     Table helper — the chart's twin
      ====================================================================== */
   function table(head, rows) {
     var thead = el('thead', {}, [
