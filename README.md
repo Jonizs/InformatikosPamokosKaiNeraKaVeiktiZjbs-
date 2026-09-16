@@ -21,8 +21,32 @@ python3 -m http.server 8000
 # atidaryk http://localhost:8000
 ```
 
-Publikavimas per GitHub Pages: *Settings → Pages → Deploy from a branch*,
-pasirink šaką ir šakninį (`/`) katalogą. Jokio konfigūravimo nereikia.
+---
+
+## Publikavimas per GitHub Pages
+
+Repozitorijoje jau yra `.github/workflows/pages.yml`, todėl reikia tik
+**vieną kartą** įjungti Pages:
+
+1. Eik į **Settings → Pages**
+2. Ties **Build and deployment → Source** pasirink **GitHub Actions**
+3. Viskas — pirmas deploy'us pasileis pats
+
+Po to kiekvienas push'as į šaką automatiškai atnaujina svetainę. Eigą matysi
+**Actions** skirtuke, o galutinė nuoroda bus:
+
+```
+https://jonizs.github.io/InformatikosPamokosKaiNeraKaVeiktiZjbs-/
+```
+
+Deploy'ą galima paleisti ir ranka: **Actions → Deploy to GitHub Pages →
+Run workflow**.
+
+Jei labiau patinka senas būdas be Actions, veiks ir **Source: Deploy from a
+branch**, pasirinkus šią šaką ir šakninį (`/`) katalogą — visi keliai
+projekte reliatyvūs, tad svetainė veikia ir iš podėlio
+`/<repo-pavadinimas>/`. Failas `.nojekyll` išjungia Jekyll apdorojimą, kad
+šis nieko nepraleistų.
 
 ---
 
@@ -88,6 +112,8 @@ assets/js/data/lol-data.js     LoL pataisos ir čempionų statistika
 assets/js/views/shared.js      bendri rodinių blokai (plytelės, antraštės, filtrai)
 assets/js/views/*.js           po vieną failą kiekvienam skirtukui
 assets/js/app.js               maršrutizavimas (#/hash), būsena, tema
+.github/workflows/pages.yml    automatinis publikavimas į GitHub Pages
+.nojekyll                      išjungia Jekyll apdorojimą Pages'e
 ```
 
 Naujas skirtukas pridedamas taip: sukuriamas `Views.vardas = { title, sub,

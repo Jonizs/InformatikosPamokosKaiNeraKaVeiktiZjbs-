@@ -1,0 +1,48 @@
+# Publikuoja svetainę į GitHub Pages.
+#
+# Vienkartinis įjungimas: Settings -> Pages -> Build and deployment ->
+# Source: "GitHub Actions". Po to kiekvienas push'as į šią šaką
+# automatiškai atnaujina svetainę.
+#
+# Projektas yra statinis (jokio build'o), todėl visas repo turinys
+# keliauja tiesiai į Pages.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - claude/quirky-fermi-nmwp83
+  workflow_dispatch:        # leidžia paleisti ranka iš Actions skirtuko
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Vienu metu vyksta tik vienas deploy'us; naujesnis nenutraukia vykstančio.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Atsisiųsti repozitoriją
+        uses: actions/checkout@v4
+
+      - name: Paruošti Pages
+        uses: actions/configure-pages@v5
+
+      - name: Supakuoti svetainę
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publikuoti
+        id: deployment
+        uses: actions/deploy-pages@v4
